@@ -6,10 +6,10 @@
 ```mermaid
 flowchart TD
     E3["Rumor & AI-signal driven roster automation<br/>2/7 done &middot; high"]
-    E4["Draft-day automation & reliability<br/>0/8 done &middot; medium"]
+    E4["Draft-day automation & reliability<br/>0/10 done &middot; low"]
     E5["Core API architecture cleanup<br/>0/4 done &middot; low"]
     E6["Data ingestion & analytics<br/>0/5 done &middot; medium"]
-    E7["Platform reliability & ops<br/>0/9 done &middot; high"]
+    E7["Platform reliability & ops<br/>0/12 done &middot; high"]
     E8["Conversational assistant<br/>0/1 done &middot; medium"]
     E9["Console / whole-league UI<br/>0/5 done &middot; high"]
     E10["Miscellaneous<br/>0/2 done &middot; unset"]
@@ -20,10 +20,10 @@ flowchart TD
 | Epic | Members | Priority |
 |---|---|---|
 | [Rumor & AI-signal driven roster automation](https://github.com/cvillarr23/fantasy-project/issues/3) | 2/7 | high |
-| [Draft-day automation & reliability](https://github.com/cvillarr23/fantasy-project/issues/4) | 0/8 | medium |
+| [Draft-day automation & reliability](https://github.com/cvillarr23/fantasy-project/issues/4) | 0/10 | low |
 | [Core API architecture cleanup](https://github.com/cvillarr23/fantasy-project/issues/5) | 0/4 | low |
 | [Data ingestion & analytics](https://github.com/cvillarr23/fantasy-project/issues/6) | 0/5 | medium |
-| [Platform reliability & ops](https://github.com/cvillarr23/fantasy-project/issues/7) | 0/9 | high |
+| [Platform reliability & ops](https://github.com/cvillarr23/fantasy-project/issues/7) | 0/12 | high |
 | [Conversational assistant](https://github.com/cvillarr23/fantasy-project/issues/8) | 0/1 | medium |
 | [Console / whole-league UI](https://github.com/cvillarr23/fantasy-project/issues/9) | 0/5 | high |
 | [Miscellaneous](https://github.com/cvillarr23/fantasy-project/issues/10) | 0/2 | unset |
