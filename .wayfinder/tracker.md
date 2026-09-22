@@ -1,1 +1,65 @@
-IyBUcmFja2VyOiBHaXRIdWIgSXNzdWVzCgpIb3cgd2F5ZmluZGVyJ3MgYWJzdHJhY3Qgb3BlcmF0aW9ucyBtYXAgb250byB0aGlzIHJlcG8ncyBpc3N1ZSB0cmFja2VyIChHaXRIdWIgSXNzdWVzICsgR3JhcGhRTCkuCgojIyBXYXlmaW5kaW5nIG9wZXJhdGlvbnMKCi0gKipNYXAqKjogYSBHaXRIdWIgaXNzdWUgaW4gdGhpcyByZXBvIChgZmFudGFzeS1wcm9qZWN0YCkgbGFiZWxsZWQgYHdheWZpbmRlcjptYXBgLgotICoqVGlja2V0Kio6IGEgR2l0SHViIGlzc3VlIOKAlCBpbiBgZmFudGFzeS1wcm9qZWN0YCBieSBkZWZhdWx0LCBvciBpbiB0aGUgcmVsZXZhbnQgYGZhbnRhc3ktKmAgcmVwbyB3aGVuIHRoZSB0aWNrZXQgaXMgcmVhbGx5IHJlcG8tc3BlY2lmaWMgd29yayDigJQgbGlua2VkIHRvIHRoZSBtYXAgYXMgYSAqKnN1Yi1pc3N1ZSoqLiBJc3N1ZSBub2RlIElEcyBhcmUgZ2xvYmFsLCBzbyB0aGlzIHdvcmtzIGNyb3NzLXJlcG8uCiAgLSBDcmVhdGU6IGBnaCBpc3N1ZSBjcmVhdGUgLS1yZXBvIDxvd25lcj4vPHJlcG8+IC0tdGl0bGUgIjx0aXRsZT4iIC0tYm9keSAiPGJvZHk+IiAtLWxhYmVsIHdheWZpbmRlcjo8dHlwZT5gCiAgLSBMaW5rIHRvIG1hcDogYGdoIGFwaSBncmFwaHFsIC1mIHF1ZXJ5PSdtdXRhdGlvbiB7IGFkZFN1Yklzc3VlKGlucHV0OiB7aXNzdWVJZDogIjxtYXBOb2RlSWQ+Iiwgc3ViSXNzdWVJZDogIjx0aWNrZXROb2RlSWQ+In0pIHsgaXNzdWUgeyBpZCB9IH0gfSdgCiAgLSBHZXQgYSBub2RlIElEOiBgZ2ggYXBpIGdyYXBocWwgLWYgcXVlcnk9J3F1ZXJ5IHsgcmVwb3NpdG9yeShvd25lcjogIjxvd25lcj4iLCBuYW1lOiAiPHJlcG8+IikgeyBpc3N1ZShudW1iZXI6IDxuPikgeyBpZCB9IH0gfSdgCi0gKipCbG9ja2luZyoqOiBuYXRpdmUgR2l0SHViIGJsb2NrZWQtYnkgcmVsYXRpb25zaGlwLgogIC0gQmxvY2s6IGBnaCBhcGkgZ3JhcGhxbCAtZiBxdWVyeT0nbXV0YXRpb24geyBhZGRCbG9ja2VkQnkoaW5wdXQ6IHtpc3N1ZUlkOiAiPGJsb2NrZWROb2RlSWQ+IiwgYmxvY2tpbmdJc3N1ZUlkOiAiPGJsb2NraW5nTm9kZUlkPiJ9KSB7IGlzc3VlIHsgaWQgfSB9IH0nYAogIC0gVW5ibG9jazogc2FtZSBzaGFwZSB3aXRoIGByZW1vdmVCbG9ja2VkQnlgLgotICoqQ2xhaW0qKjogYGdoIGlzc3VlIGVkaXQgPG4+IC0tcmVwbyA8b3duZXI+LzxyZXBvPiAtLWFkZC1hc3NpZ25lZSBAbWVgIChzZWxmLWFzc2lnbiBiZWZvcmUgc3RhcnRpbmcgd29yaykuCi0gKipGcm9udGllciBxdWVyeSoqOiBvcGVuLCB1bmFzc2lnbmVkIGlzc3VlcyB1bmRlciB0aGUgbWFwIHdpdGggbm8gb3BlbiBgYmxvY2tlZEJ5YCBpc3N1ZXMuCiAgYGBgCiAgZ2ggYXBpIGdyYXBocWwgLWYgcXVlcnk9J3F1ZXJ5IHsKICAgIHJlcG9zaXRvcnkob3duZXI6ICI8b3duZXI+IiwgbmFtZTogIjxyZXBvPiIpIHsKICAgICAgaXNzdWUobnVtYmVyOiA8bWFwTnVtYmVyPikgewogICAgICAgIGlkCiAgICAgICAgdHJhY2tlZElzc3VlcyhmaXJzdDogNTApIHsKICAgICAgICAgIG5vZGVzIHsgbnVtYmVyIHRpdGxlIHN0YXRlIGFzc2lnbmVlcyhmaXJzdDogMSkgeyBub2RlcyB7IGxvZ2luIH0gfSBibG9ja2VkQnkoZmlyc3Q6IDEwKSB7IG5vZGVzIHsgc3RhdGUgfSB9IH0KICAgICAgICB9CiAgICAgIH0KICAgIH0KICB9J2AKICBGaWx0ZXIgY2xpZW50LXNpZGU6IGBzdGF0ZSA9PSBPUEVOICYmIGFzc2lnbmVlcy5ub2Rlcy5pc0VtcHR5KCkgJiYgYmxvY2tlZEJ5Lm5vZGVzLmFsbChzdGF0ZSA9PSBDTE9TRUQpYC4KLSAqKlJlc29sdXRpb24qKjogYGdoIGlzc3VlIGNvbW1lbnQgPG4+IC0tcmVwbyA8b3duZXI+LzxyZXBvPiAtLWJvZHkgIjxyZXNvbHV0aW9uIGNvbW1lbnQ+ImAgdGhlbiBgZ2ggaXNzdWUgY2xvc2UgPG4+IC0tcmVwbyA8b3duZXI+LzxyZXBvPiAtLXJlYXNvbiBjb21wbGV0ZWRgLiBBcHBlbmQgdGhlIG9uZS1saW5lIGdpc3QgKyBsaW5rIHRvIHRoZSBtYXAgYm9keSdzICJEZWNpc2lvbnMgc28gZmFyIiBzZWN0aW9uIHZpYSBgZ2ggaXNzdWUgZWRpdCA8bWFwTnVtYmVyPiAtLXJlcG8gPG93bmVyPi88cmVwbz4gLS1ib2R5LWZpbGUgLWAuCi0gKipPdXQgb2Ygc2NvcGUqKjogY2xvc2UgdGhlIHRpY2tldCB3aXRoIGAtLXJlYXNvbiAibm90IHBsYW5uZWQiYCwgYWRkIG9uZSBsaW5lIHRvIHRoZSBtYXAncyAiT3V0IG9mIHNjb3BlIiBzZWN0aW9uIChnaXN0ICsgd2h5ICsgbGluayksIGRvIE5PVCBhZGQgdG8gRGVjaXNpb25zIHNvIGZhci4KCiMjIE5vdGVzCgotIEZvbGxvdyB0aGUgZ2xvYmFsIHJlbGF0aW9uc2hpcCBydWxlcyBpbiBgfi8uY2xhdWRlL0NMQVVERS5tZGA6IHVzZSBgYWRkQmxvY2tlZEJ5YC9gYWRkU3ViSXNzdWVgIGZvciByZWFsIGRlcGVuZGVuY2llcy9kZWNvbXBvc2l0aW9uczsgdXNlIGEgY3Jvc3MtcmVmZXJlbmNpbmcgY29tbWVudCAoYG93bmVyL3JlcG8jTmApIGZvciAicmVsYXRlcyB0byIg4oCUIG5vIG5hdGl2ZSBtdXRhdGlvbiBleGlzdHMgZm9yIHRoYXQuCi0gU2tpcCBhIGJsb2NrZWQtYnkgbGluayB0byBhbiBhbHJlYWR5LWNsb3NlZCBpc3N1ZS4KLSBWZXJpZnkgbXV0YXRpb25zIGxhbmRlZCBieSBxdWVyeWluZyBiYWNrIChgYmxvY2tlZEJ5YC9gdHJhY2tlZElzc3Vlc2ApIHJhdGhlciB0aGFuIHRydXN0aW5nIHRoZSBtdXRhdGlvbiByZXNwb25zZSBhbG9uZS4K
+# Tracker: GitHub Issues
+
+How wayfinder's abstract operations map onto this repo's issue tracker (GitHub Issues + GraphQL).
+
+## Wayfinding operations
+
+- **Map**: a GitHub issue in this repo (`fantasy-project`) labelled `wayfinder:map`.
+- **Ticket**: a GitHub issue — in `fantasy-project` by default, or in the relevant `fantasy-*` repo when the ticket is really repo-specific work — linked to the map as a **sub-issue**. Issue node IDs are global, so this works cross-repo.
+  - Create: `gh issue create --repo <owner>/<repo> --title "<title>" --body "<body>" --label wayfinder:<type>`
+  - Link to map: `gh api graphql -f query='mutation { addSubIssue(input: {issueId: "<mapNodeId>", subIssueId: "<ticketNodeId>"}) { issue { id } } }'`
+  - Get a node ID: `gh api graphql -f query='query { repository(owner: "<owner>", name: "<repo>") { issue(number: <n>) { id } } }'`
+- **Blocking**: native GitHub blocked-by relationship.
+  - Block: `gh api graphql -f query='mutation { addBlockedBy(input: {issueId: "<blockedNodeId>", blockingIssueId: "<blockingNodeId>"}) { issue { id } } }'`
+  - Unblock: same shape with `removeBlockedBy`.
+- **Claim**: `gh issue edit <n> --repo <owner>/<repo> --add-assignee @me` (self-assign before starting work).
+- **Frontier query**: open, unassigned issues under the map with no open `blockedBy` issues.
+  ```
+  gh api graphql -f query='query {
+    repository(owner: "<owner>", name: "<repo>") {
+      issue(number: <mapNumber>) {
+        id
+        trackedIssues(first: 50) {
+          nodes { number title state assignees(first: 1) { nodes { login } } blockedBy(first: 10) { nodes { state } } }
+        }
+      }
+    }
+  }'
+  ```
+  Filter client-side: `state == OPEN && assignees.nodes.isEmpty() && blockedBy.nodes.all(state == CLOSED)`.
+- **Resolution**: `gh issue comment <n> --repo <owner>/<repo> --body "<resolution comment>"` then `gh issue close <n> --repo <owner>/<repo> --reason completed`. Append the one-line gist + link to the map body's "Decisions so far" section via `gh issue edit <mapNumber> --repo <owner>/<repo> --body-file -`.
+- **Out of scope**: close the ticket with `--reason "not planned"`, add one line to the map's "Out of scope" section (gist + why + link), do NOT add to Decisions so far.
+
+## Epics
+
+Epics live in `fantasy-project`, labelled `epic`, titled `[EPIC] <name>`. Member issues (drawn from any of the 4 fantasy-* repos) are attached as native **sub-issues**, same mechanism as tickets — `addSubIssue`, cross-repo, via node ID. An epic's own `subIssues` connection (not `trackedIssues`, which is a different/legacy field that returns empty here) is how to list its members:
+
+```
+gh api graphql -f query='query {
+  repository(owner: "cvillarr23", name: "fantasy-project") {
+    issue(number: <epicNumber>) {
+      subIssues(first: 50) {
+        nodes { number title repository { name } labels(first: 20) { nodes { name } } }
+      }
+    }
+  }
+}'
+```
+
+**An issue may only have one parent.** If a `fantasy-*` repo already has ad-hoc nesting (a feature issue with its own sub-issues, e.g. `fantasy-web-ui#77` "Waiver Manager" with `#80`/`#81` nested under it), don't fight it — link the *top* of that existing chain as the epic's direct member; its children come along transitively. Only reparent a leaf issue directly (via `addSubIssue` with `replaceParent: true`) when it's individually misclassified relative to its current parent's epic.
+
+**No orphan work**: every issue filed in any of the 4 `fantasy-*` repos should end up as a sub-issue of exactly one epic in `fantasy-project` (or in `[EPIC] Miscellaneous` if it's too small/one-off to justify a new epic — but don't let Miscellaneous become a dumping ground; if something's been sitting there more than a few weeks, promote it to a real epic or close it). This is enforced by `.github/workflows/epic-required.yml` in each of the 4 repos — see that file for the exact check.
+
+## Cross-epic dependencies
+
+Epics group *ownership*, not *sequencing*. Two issues living in different epics can still genuinely block each other — e.g. a core-pipeline refactor epic and a draft-day-reliability epic both touching `src/api/draft.py`. **Don't assume this can be inferred from issue titles alone** — it wasn't backfilled wholesale when this taxonomy was first charted, specifically to avoid fabricating relationships nobody verified. Instead:
+
+- Whenever resolving a ticket (or doing any real work) surfaces a genuine cross-epic dependency, wire it immediately with `addBlockedBy` (see above) — don't defer it to "someday."
+- If you're not sure whether it's a real blocking dependency or just a loose "these touch similar code" association, use a `relates to` cross-reference comment (`owner/repo#N`) instead of `blocked-by` — see the global relationship rules below. `blocked-by` should mean "literally cannot start until this closes," not "related."
+- Periodically (e.g. when resolving a batch of tickets in one epic) it's worth a quick check of whether any of that epic's issues reference files/endpoints another epic also touches, and wiring the dependency if so.
+
+## Notes
+
+- Follow the global relationship rules in `~/.claude/CLAUDE.md`: use `addBlockedBy`/`addSubIssue` for real dependencies/decompositions; use a cross-referencing comment (`owner/repo#N`) for "relates to" — no native mutation exists for that.
+- Skip a blocked-by link to an already-closed issue.
+- Verify mutations landed by querying back (`blockedBy`/`subIssues`) rather than trusting the mutation response alone.
