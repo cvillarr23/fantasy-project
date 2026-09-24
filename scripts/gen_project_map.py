@@ -6,11 +6,19 @@ import json
 import subprocess
 
 OWNER = "cvillarr23"
-EPIC_NUMBERS = range(3, 12)
 
 def gh_json(*args):
     out = subprocess.run(["gh", *args], capture_output=True, text=True, check=True)
     return json.loads(out.stdout)
+
+def get_epic_numbers():
+    # Live query instead of a hardcoded range -- a static range silently drops
+    # newly-created epics.
+    out = gh_json(
+        "issue", "list", "--repo", f"{OWNER}/fantasy-project",
+        "--label", "epic", "--state", "open", "--json", "number",
+    )
+    return sorted(item["number"] for item in out)
 
 def get_epic(number):
     q = """query($owner:String!,$number:Int!){
@@ -29,7 +37,7 @@ def sanitize(s):
     return s.replace('"', "'")
 
 def main():
-    epics = [get_epic(n) for n in EPIC_NUMBERS]
+    epics = [get_epic(n) for n in get_epic_numbers()]
     lines = []
     lines.append("# Project Map")
     lines.append("")
