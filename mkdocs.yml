@@ -27,6 +27,7 @@ nav:
   - Home: index.md
   - Project Map: project-map.md
   - Architecture: architecture.md
+  - Season management rollout: season-management-ux.md
 
 markdown_extensions:
   - admonition
