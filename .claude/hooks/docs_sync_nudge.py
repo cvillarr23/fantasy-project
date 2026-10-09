@@ -13,6 +13,6 @@ except (json.JSONDecodeError, ValueError):
 
 command = (payload.get("tool_input") or {}).get("command", "")
 if "gh issue close" in command:
-    print("Ticket closed -- run the docs-sync skill to regenerate docs/project-map.md and check docs/architecture.md before moving on.")
+    print("Ticket closed -- run the docs-sync skill to regenerate docs/overview/project-map.md and check docs/overview/architecture.md before moving on.")
 
 sys.exit(0)

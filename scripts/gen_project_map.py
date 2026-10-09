@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
-"""Regenerate docs/project-map.md's Mermaid graph from live GitHub state.
-Run from anywhere with `gh` authenticated. Prints Markdown to stdout --
-redirect into docs/project-map.md and commit."""
+"""Regenerate the docs site's project map page from live GitHub state.
+Run from anywhere with `gh` authenticated. Writes docs/overview/project-map.md
+in this repo -- review the diff and commit."""
 import json
+import pathlib
 import subprocess
 
 OWNER = "cvillarr23"
+OUTPUT = pathlib.Path(__file__).resolve().parent.parent / "docs" / "overview" / "project-map.md"
 
 def gh_json(*args):
     out = subprocess.run(["gh", *args], capture_output=True, text=True, check=True)
@@ -39,10 +41,17 @@ def sanitize(s):
 def main():
     epics = [get_epic(n) for n in get_epic_numbers()]
     lines = []
-    lines.append("# Project Map")
+    lines.append("---")
+    lines.append("title: Project map")
+    lines.append("description: Open epics across the fantasy-* repos with their progress and priority, generated from GitHub.")
+    lines.append("sidebar_position: 3")
+    lines.append("---")
     lines.append("")
-    lines.append("!!! note")
-    lines.append("    Generated from live GitHub state by `scripts/gen_project_map.py` (run it and commit the output whenever epics change -- this is a snapshot, not auto-refreshing).")
+    lines.append(":::note")
+    lines.append("")
+    lines.append("Generated from live GitHub state by `scripts/gen_project_map.py` (run it and commit the output whenever epics change -- this is a snapshot, not auto-refreshing).")
+    lines.append("")
+    lines.append(":::")
     lines.append("")
     lines.append("```mermaid")
     lines.append("flowchart TD")
@@ -71,7 +80,8 @@ def main():
     lines.append("```")
     lines.append('gh api graphql -f query=\'{ repository(owner:"cvillarr23",name:"fantasy-project"){ issue(number:N){ blockedBy(first:10){ nodes { number title repository { name } } } } } }\'')
     lines.append("```")
-    print("\n".join(lines))
+    OUTPUT.write_text("\n".join(lines) + "\n")
+    print(f"Wrote {OUTPUT}")
 
 if __name__ == "__main__":
     main()

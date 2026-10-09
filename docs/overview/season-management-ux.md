@@ -1,4 +1,8 @@
-# Season management UX overhaul
+---
+title: Season management rollout
+description: What the season management UX overhaul delivered across the web UI, core API and worker, and how to roll it out.
+sidebar_position: 4
+---
 
 ## Delivered behavior
 
@@ -46,7 +50,7 @@ Validation used mocked ESPN/broker/database boundaries and mocked browser API re
 - Worker: 566 tests, including duplicate ownership and best-effort outcome recording after external writes.
 - Browser: 14 routes at 320, 375, 768, 1024, and 1440px; no page-wide overflow or runtime errors. Mobile drawer navigation also checked.
 
-Screenshots are in `screenshots/ux-overhaul/` and use synthetic fixture data.
+Screenshots are in [`screenshots/ux-overhaul/`](https://github.com/cvillarr23/fantasy-project/tree/main/docs/overview/screenshots/ux-overhaul) and use synthetic fixture data.
 
 ## Review corrections
 
