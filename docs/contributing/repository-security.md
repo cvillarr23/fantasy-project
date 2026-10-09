@@ -6,7 +6,9 @@ sidebar_position: 3
 
 ## Actions and dependencies
 
-Set all five repositories to a read-only default `GITHUB_TOKEN`, with approval of pull request reviews disabled. Merge core-pipeline's explicit workflow permissions before changing its repository default from write to read. Workflows declare their permissions explicitly: build and test jobs read contents, issue automation writes issues, and image publication writes packages only on a push to the default branch. The issue-link check reads pull requests and writes issue labels on trusted PRs. For fork and Dependabot PRs it skips labels and comments, reports missing links in the check, and explains any failure to read closing issue references.
+Set all five repositories to a read-only default `GITHUB_TOKEN`, with approval of pull request reviews disabled. Merge core-pipeline's explicit workflow permissions before changing its repository default from write to read. Workflows declare their permissions explicitly: build and test jobs read contents, issue automation writes issues, and image publication writes packages only on a push to the default branch. The issue-link check requests pull request write access to manage labels and comments on trusted PRs. For fork and Dependabot PRs it skips labels and comments, reports missing links in the check, and explains any failure to read closing issue references.
+
+The repo-scoped token cannot see closing links to private sibling repositories. The check also accepts a qualified closing reference to the shared `cvillarr23/fantasy-project` tracker in the PR body, such as `Fixes cvillarr23/fantasy-project#N` or its issue URL. Maintainers verify that the referenced tracker issue exists and matches the work; this fallback checks reference syntax only.
 
 Actions are pinned to full commit SHAs, with the major version in a comment. Dependabot checks weekly and can update these pins. Review the upstream release and workflow diff before merging an action update.
 
