@@ -8,7 +8,7 @@ Source: [fantasy-web-ui](https://github.com/cvillarr23/fantasy-web-ui).
 
 React and TypeScript console for lineups, moves, standings and activity.
 
-:::info Stub
+:::info[Stub]
 
 This section is a placeholder. It will cover:
 

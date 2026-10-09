@@ -8,7 +8,7 @@ Source: [fantasy-core-pipeline](https://github.com/cvillarr23/fantasy-core-pipel
 
 FastAPI control plane: ingestion, VORP and optimization, the API gateway and the only RabbitMQ publisher.
 
-:::info Stub
+:::info[Stub]
 
 This section is a placeholder. It will cover:
 

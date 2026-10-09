@@ -8,7 +8,7 @@ Source: [fantasy-infra](https://github.com/cvillarr23/fantasy-infra).
 
 GitOps manifests for every service, CronJob schedules, secrets wiring and dashboards.
 
-:::info Stub
+:::info[Stub]
 
 This section is a placeholder. It will cover:
 
