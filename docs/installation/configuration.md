@@ -4,7 +4,7 @@ description: Environment variables and settings for each service.
 sidebar_position: 1
 ---
 
-:::info Stub
+:::info[Stub]
 
 This section is a placeholder. It will cover:
 

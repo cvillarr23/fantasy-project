@@ -4,7 +4,7 @@ description: How each kind of action travels from its trigger through the API, R
 sidebar_position: 2
 ---
 
-:::info Stub
+:::info[Stub]
 
 This section is a placeholder. It will cover:
 

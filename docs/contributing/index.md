@@ -4,7 +4,7 @@ description: How to work on the fantasy-* repos and on these docs.
 sidebar_position: 6
 ---
 
-:::info Stub
+:::info[Stub]
 
 This section is a placeholder. It will cover:
 

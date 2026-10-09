@@ -8,7 +8,7 @@ Source: [fantasy-browser-worker](https://github.com/cvillarr23/fantasy-browser-w
 
 Execution layer: RabbitMQ consumers that drive ESPN with Playwright, plus the LLM-backed bots.
 
-:::info Stub
+:::info[Stub]
 
 This section is a placeholder. It will cover:
 

@@ -4,7 +4,7 @@ description: External services the system depends on and how each is used.
 sidebar_position: 4
 ---
 
-:::info Stub
+:::info[Stub]
 
 This section is a placeholder. It will cover:
 

@@ -5,6 +5,8 @@ sidebar_position: 1
 slug: /
 ---
 
+import Disclaimer from '@site/DISCLAIMER.md';
+
 Fantasy Project automates an ESPN fantasy football league: it ingests player data, scores and optimizes rosters, and runs the resulting lineup, waiver, draft and trade actions against ESPN. The work is split across four repositories, coordinated from this one:
 
 - [fantasy-core-pipeline](https://github.com/cvillarr23/fantasy-core-pipeline): FastAPI backend, ingestion and optimization. It is the only service that publishes to RabbitMQ.
@@ -12,10 +14,14 @@ Fantasy Project automates an ESPN fantasy football league: it ingests player dat
 - [fantasy-web-ui](https://github.com/cvillarr23/fantasy-web-ui): the React console.
 - [fantasy-infra](https://github.com/cvillarr23/fantasy-infra): Kubernetes manifests, CronJobs and secrets wiring.
 
+## Disclaimer and scope
+
+<Disclaimer />
+
 ## Where to start
 
 - [Overview](./overview/index.md): architecture, end-to-end flows and the project map.
-- [Installation and configuration](./installation/index.md): running the stack yourself.
+- [Installation and configuration](./installation/index.mdx): running the stack yourself.
 - [Integrations](./integrations/index.md): ESPN, LLM providers and other external services.
 - [Repositories](./repos/index.md): per-repo documentation.
 - [Contributing](./contributing/index.md): how to work on the code and these docs.
