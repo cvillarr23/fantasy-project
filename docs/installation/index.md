@@ -1,0 +1,15 @@
+---
+title: Installation and configuration
+description: Running the fantasy-* stack yourself.
+sidebar_position: 3
+---
+
+:::info Stub
+
+This section is a placeholder. It will cover:
+
+- Prerequisites and a local development setup for each service.
+- Self-hosting on Kubernetes with the manifests in fantasy-infra.
+- Networking and deployment.
+
+:::

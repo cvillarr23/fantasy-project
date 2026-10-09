@@ -1,10 +1,20 @@
-# Architecture
+---
+title: Architecture
+description: How the four fantasy-* services, their shared stores and the RabbitMQ queues fit together.
+sidebar_position: 1
+---
 
-!!! note
-    This is a living doc. Update it as part of resolving wayfinder tickets on the [map](https://github.com/cvillarr23/fantasy-project/issues/1) — don't let it drift from what's actually been decided there.
+:::note
 
-!!! warning
-    Three of the four repos' READMEs (`fantasy-infra`, `fantasy-browser-worker`, and previously `fantasy-core-pipeline` itself) link to `fantasy-core-pipeline/ARCHITECTURE.md` as "the" cross-repo architecture doc. That file does not exist in the repo — never committed. This page is written to become that missing doc; the dead links in the other three repos should eventually point here instead.
+This is a living doc. Update it as part of resolving wayfinder tickets on the [map](https://github.com/cvillarr23/fantasy-project/issues/1) — don't let it drift from what's actually been decided there.
+
+:::
+
+:::warning
+
+Three of the four repos' READMEs (`fantasy-infra`, `fantasy-browser-worker`, and previously `fantasy-core-pipeline` itself) link to `fantasy-core-pipeline/ARCHITECTURE.md` as "the" cross-repo architecture doc. That file does not exist in the repo — never committed. This page is written to become that missing doc; the dead links in the other three repos should eventually point here instead.
+
+:::
 
 ## System overview
 

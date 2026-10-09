@@ -1,18 +1,27 @@
-# Fantasy Project
+---
+title: Fantasy Project
+description: "Documentation for the fantasy-* services: what they do, how they fit together and how to run them."
+sidebar_position: 1
+slug: /
+---
 
-Cross-cutting planning and architecture for the fantasy-* project. This repo is not a code repo — it's the coordination layer on top of:
+Fantasy Project automates an ESPN fantasy football league: it ingests player data, scores and optimizes rosters, and runs the resulting lineup, waiver, draft and trade actions against ESPN. The work is split across four repositories, coordinated from this one:
 
-- [fantasy-infra](https://github.com/cvillarr23/fantasy-infra) — Kubernetes/cron infrastructure
-- [fantasy-web-ui](https://github.com/cvillarr23/fantasy-web-ui) — frontend
-- [fantasy-core-pipeline](https://github.com/cvillarr23/fantasy-core-pipeline) — FastAPI backend
-- [fantasy-browser-worker](https://github.com/cvillarr23/fantasy-browser-worker) — Playwright/LLM automation worker
+- [fantasy-core-pipeline](https://github.com/cvillarr23/fantasy-core-pipeline): FastAPI backend, ingestion and optimization. It is the only service that publishes to RabbitMQ.
+- [fantasy-browser-worker](https://github.com/cvillarr23/fantasy-browser-worker): Playwright and LLM automation worker that acts on ESPN.
+- [fantasy-web-ui](https://github.com/cvillarr23/fantasy-web-ui): the React console.
+- [fantasy-infra](https://github.com/cvillarr23/fantasy-infra): Kubernetes manifests, CronJobs and secrets wiring.
+
+## Where to start
+
+- [Overview](./overview/index.md): architecture, end-to-end flows and the project map.
+- [Installation and configuration](./installation/index.md): running the stack yourself.
+- [Integrations](./integrations/index.md): ESPN, LLM providers and other external services.
+- [Repositories](./repos/index.md): per-repo documentation.
+- [Contributing](./contributing/index.md): how to work on the code and these docs.
 
 ## Planning: the wayfinder map
 
-The cross-repo epic taxonomy is charted as a [wayfinder map](https://github.com/cvillarr23/fantasy-project/issues/1) — a single GitHub issue that indexes decisions and points at the child-issue tickets that hold their detail. See [`.wayfinder/tracker.md`](https://github.com/cvillarr23/fantasy-project/blob/main/.wayfinder/tracker.md) for how the map's operations map onto GitHub Issues.
+The cross-repo epic taxonomy is charted as a [wayfinder map](https://github.com/cvillarr23/fantasy-project/issues/1): a single GitHub issue that indexes decisions and points at the child-issue tickets that hold their detail. See [`.wayfinder/tracker.md`](https://github.com/cvillarr23/fantasy-project/blob/main/.wayfinder/tracker.md) for how the map's operations map onto GitHub Issues.
 
-Each of the four repos still owns its own issues — this map only groups them into epics; it doesn't replace per-repo issue tracking.
-
-## Architecture
-
-See [Architecture](architecture.md) for the current system design. That page is a living doc, kept in sync with decisions recorded on the wayfinder map.
+Each of the four repos still owns its own issues. The map only groups them into epics; it doesn't replace per-repo issue tracking.
