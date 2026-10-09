@@ -108,6 +108,10 @@ const config: Config = {
             {label: 'fantasy-project', href: repoUrl},
           ],
         },
+        {
+          title: 'About',
+          items: [{label: 'Disclaimer and scope', to: '/disclaimer'}],
+        },
       ],
     },
     prism: {
