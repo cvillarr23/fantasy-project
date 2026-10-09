@@ -13,8 +13,7 @@ const config: Config = {
     v4: true,
   },
 
-  // Placeholder until the Cloudflare Pages domain exists.
-  url: 'https://fantasy-project.pages.dev',
+  url: 'https://fantasy-docs.roo-net.cc',
   baseUrl: '/',
 
   organizationName: 'cvillarr23',
