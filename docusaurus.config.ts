@@ -1,8 +1,51 @@
 import {themes as prismThemes} from 'prism-react-renderer';
 import type {Config} from '@docusaurus/types';
 import type * as Preset from '@docusaurus/preset-classic';
+import type {Options as DocsOptions} from '@docusaurus/plugin-content-docs';
+import {existsSync} from 'node:fs';
+import path from 'node:path';
 
 const repoUrl = 'https://github.com/cvillarr23/fantasy-project';
+
+const repositories = [
+  {id: 'core', name: 'fantasy-core-pipeline', branch: 'main', label: 'Core'},
+  {id: 'worker', name: 'fantasy-browser-worker', branch: 'main', label: 'Worker'},
+  {id: 'ui', name: 'fantasy-web-ui', branch: 'master', label: 'UI'},
+  {id: 'infra', name: 'fantasy-infra', branch: 'main', label: 'Infra'},
+];
+
+const repoDocsPlugins: NonNullable<Config['plugins']> = repositories.map((repo) => {
+  const source = path.resolve(process.env.FANTASY_DOCS_ROOT ?? '..', repo.name, 'docs');
+  const available = process.env.FANTASY_DOCS_SITE_ONLY !== 'true' && existsSync(source);
+  if (!available && process.env.FANTASY_DOCS_REQUIRED === 'true') {
+    throw new Error(`Missing ${source}. Check DOCS_REPOS_READ_TOKEN and the repository checkouts.`);
+  }
+  if (!available) console.warn(`Using local placeholder for ${repo.name}; checkout its docs to see the full section.`);
+  return ['@docusaurus/plugin-content-docs', {
+    id: repo.id,
+    path: available ? source : `repo-docs-fallback/${repo.id}`,
+    routeBasePath: repo.id,
+    sidebarPath: './sidebars.ts',
+    sidebarItemsGenerator: async (args) => {
+      const items = await args.defaultSidebarItemsGenerator(args);
+      // Repos without an index page still need a landing route for site navigation.
+      if (available && !['index.md', 'index.mdx'].some((file) => existsSync(path.join(source, file)))) {
+        return [{
+          type: 'category',
+          label: repo.label,
+          link: {type: 'generated-index', slug: '/'},
+          items,
+        }];
+      }
+      return items;
+    },
+    exclude: ['**/superpowers/**', '**/plans/**', '**/working-notes/**'],
+    editUrl: ({docPath}: {docPath: string}) => available
+      ? `https://github.com/cvillarr23/${repo.name}/edit/${repo.branch}/docs/${docPath}`
+      : `${repoUrl}/edit/main/repo-docs-fallback/${repo.id}/${docPath}`,
+    showLastUpdateTime: available,
+  } satisfies DocsOptions];
+});
 
 const config: Config = {
   title: 'Fantasy Project',
@@ -43,7 +86,7 @@ const config: Config = {
       '@easyops-cn/docusaurus-search-local',
       {
         hashed: true,
-        docsRouteBasePath: '/',
+        docsRouteBasePath: ['/', ...repositories.map((repo) => `/${repo.id}`)],
         indexBlog: false,
         highlightSearchTermsOnTargetPage: true,
       },
@@ -69,6 +112,8 @@ const config: Config = {
     ],
   ],
 
+  plugins: repoDocsPlugins,
+
   themeConfig: {
     colorMode: {
       respectPrefersColorScheme: true,
@@ -82,6 +127,13 @@ const config: Config = {
           position: 'left',
           label: 'Docs',
         },
+        ...repositories.map((repo) => ({
+          type: 'docSidebar' as const,
+          docsPluginId: repo.id,
+          sidebarId: 'docs',
+          position: 'left' as const,
+          label: repo.label,
+        })),
         {
           href: repoUrl,
           label: 'GitHub',

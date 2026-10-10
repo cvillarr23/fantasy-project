@@ -1,6 +1,7 @@
 ---
 title: browser-worker
 description: "Execution layer: RabbitMQ consumers that drive ESPN with Playwright, plus the LLM-backed bots."
+slug: /
 sidebar_position: 2
 ---
 
@@ -8,12 +9,11 @@ Source: [fantasy-browser-worker](https://github.com/cvillarr23/fantasy-browser-w
 
 Execution layer: RabbitMQ consumers that drive ESPN with Playwright, plus the LLM-backed bots.
 
-:::info[Stub]
+:::info[Local checkout needed]
 
-This section is a placeholder. It will cover:
-
-- Each bot and the queue it consumes.
-- ESPN browser flows and the requests they replay.
-- The LLM client and async request queue.
+The full documentation comes from `fantasy-browser-worker/docs/`. Clone or update that
+repository beside this site, or set `FANTASY_DOCS_ROOT` to the directory containing
+your source checkouts, then restart the dev server. CI imports the published docs
+from the repository's default branch.
 
 :::
