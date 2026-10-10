@@ -116,8 +116,9 @@ checkout. Local pages can reflect uncommitted source changes.
 Folders named `superpowers`, `plans` or `working-notes` are excluded from the docs
 plugins. Keep working notes there and do not link to them from published pages.
 
-A push to the source repo's default branch that changes `docs/**` sends the
-`docs-updated` repository dispatch to the site. The site rebuilds all four sections,
+A push to the source repo's default branch that changes `docs/**` calls the shared
+`fantasy-project/.github/actions/dispatch-docs` action to send the `docs-updated`
+repository dispatch to the site. The site rebuilds all four sections,
 and a nightly build at 08:17 UTC catches missed notifications. See
 [Docs site deploys](docs-site-deploys.md#source-repository-credentials) for credentials
 and manual rebuilds.

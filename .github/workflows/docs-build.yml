@@ -90,6 +90,7 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
+      - run: npm run test:actions
       - run: npm run build
         env:
           FANTASY_DOCS_ROOT: ${{ github.workspace }}/.repo-docs

@@ -68,11 +68,23 @@ source repos. Renew the tokens and replace the secrets before they expire. The
 checkout actions do not persist the read credential in git configuration.
 
 The notification workflow is `.github/workflows/docs-site-dispatch.yml` in each
-source repo. It sends `docs-updated` with the source repository and commit SHA after
-a docs change lands on its default branch (`master` for web-ui, `main` for the
-others). These fields are diagnostic only: the build always checks out all four
+source repo. It calls the shared composite action
+`cvillarr23/fantasy-project/.github/actions/dispatch-docs`, pinned to a full commit
+SHA, and passes only `DOCS_SITE_DISPATCH_TOKEN` as its `token` input. The action
+sends `docs-updated` with the caller's repository and commit SHA after a docs change
+lands on its default branch (`master` for web-ui, `main` for the others). These fields are diagnostic only: the build always checks out all four
 default branches and does not execute payload values. Source workflows can also be
 run manually to retry a notification.
+
+Because fantasy-project is private, its **Settings → Actions → General → Access**
+is set to **Accessible from repositories owned by cvillarr23**. GitHub supplies a
+short-lived read credential to download the shared action; the dispatch PAT is
+used only for sending the event. This sharing setting applies to private repos
+owned by the same user.
+
+When changing the shared action, validate `npm run test:actions`, merge its site
+PR, then update the pinned SHA in the four source workflows. The caller workflows
+keep the branch and path filters; dispatch behavior lives in one place.
 
 The site rebuilds nightly at **08:17 UTC** even without a notification. To rebuild
 immediately, select **Actions → Docs build → Run workflow → main**, or run:
