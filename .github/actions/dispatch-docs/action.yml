@@ -1,0 +1,18 @@
+name: Rebuild the docs site
+description: Notify fantasy-project that a source repository's documentation changed.
+
+inputs:
+  token:
+    description: Token with Contents write permission for fantasy-project only.
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Send the docs update
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.token }}
+        SOURCE_REPOSITORY: ${{ github.repository }}
+        SOURCE_SHA: ${{ github.sha }}
+      run: bash "$GITHUB_ACTION_PATH/dispatch.sh"

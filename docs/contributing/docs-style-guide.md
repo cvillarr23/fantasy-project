@@ -80,7 +80,51 @@ Each section is a folder under `docs/` with an `index.md` landing page and a `_c
 
 ## Links
 
-Link to other pages by relative path to the Markdown file, such as `[Architecture](../overview/architecture.md)`, not to the site URL. The build fails on broken links, so a renamed or moved page shows up immediately.
+Within one repository, link by relative path to the Markdown file, such as
+`[Architecture](../overview/architecture.md)` or `[Data model](./data-model.md)`.
+Docusaurus resolves Markdown file references within the same docs plugin instance.
+
+Across repositories, use the site's absolute route, including any heading anchor:
+`[Message contracts](/worker/message-contracts)` or
+`[Style guide](/contributing/docs-style-guide)`. Do not link to a sibling checkout's
+Markdown path; plugin instances cannot resolve each other's file references.
+
+| Repository | Route prefix | Imported branch |
+|---|---|---|
+| fantasy-project | `/` | The site build's commit |
+| fantasy-core-pipeline | `/core` | `main` |
+| fantasy-browser-worker | `/worker` | `main` |
+| fantasy-web-ui | `/ui` | `master` |
+| fantasy-infra | `/infra` | `main` |
+
+Add `slug: /` to a repo's `docs/index.md` to make it the section landing page.
+If a repo has no root index page, the site generates a landing page from its sidebar.
+Other pages use their path under `docs/` without the Markdown extension unless
+frontmatter sets a different `slug`. The build fails on broken Markdown links,
+site routes and heading anchors, including links across repo instances. Use GitHub
+URLs for code and files outside `docs/`; those are not site pages.
+
+### Build-time imports
+
+The site reads each source repo's `docs/` directly, including colocated images and
+linked assets such as `openapi.json`. The CI checkouts have full history so the
+last-updated timestamps and edit links refer to the source repo. The local dev
+server reads sibling checkouts named `../fantasy-*`; `FANTASY_DOCS_ROOT` overrides
+the directory containing all four checkouts. Restart the server after adding a
+checkout. Local pages can reflect uncommitted source changes.
+
+Folders named `superpowers`, `plans` or `working-notes` are excluded from the docs
+plugins. Keep working notes there and do not link to them from published pages.
+
+A push to the source repo's default branch that changes `docs/**` calls the shared
+`fantasy-project/.github/actions/dispatch-docs` action to send the `docs-updated`
+repository dispatch to the site. The site rebuilds all four sections,
+and a nightly build at 08:17 UTC catches missed notifications. See
+[Docs site deploys](docs-site-deploys.md#source-repository-credentials) for credentials
+and manual rebuilds.
+
+Every source repo's PR template asks **Docs updated?** Update its docs alongside
+changes to behavior, API, configuration or workflows, or explain why none are needed.
 
 ## Diagrams
 

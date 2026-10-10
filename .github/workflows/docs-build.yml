@@ -4,6 +4,11 @@ on:
   pull_request:
   push:
     branches: [main]
+  repository_dispatch:
+    types: [docs-updated]
+  schedule:
+    - cron: '17 8 * * *'
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -16,12 +21,82 @@ jobs:
         with:
           # Full history so "last updated" dates come from each page's last commit.
           fetch-depth: 0
+      - name: Require the source-repo read credential
+        if: >-
+          github.event_name != 'pull_request' ||
+          (github.event.pull_request.head.repo.full_name == github.repository &&
+           github.actor != 'dependabot[bot]')
+        env:
+          DOCS_REPOS_READ_TOKEN: ${{ secrets.DOCS_REPOS_READ_TOKEN }}
+        run: |
+          if [ -z "$DOCS_REPOS_READ_TOKEN" ]; then
+            echo "::error::Set DOCS_REPOS_READ_TOKEN with Contents: read for the four source repos."
+            exit 1
+          fi
+      - name: Checkout fantasy-core-pipeline docs
+        if: >-
+          github.event_name != 'pull_request' ||
+          (github.event.pull_request.head.repo.full_name == github.repository &&
+           github.actor != 'dependabot[bot]')
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          repository: cvillarr23/fantasy-core-pipeline
+          ref: main
+          path: .repo-docs/fantasy-core-pipeline
+          token: ${{ secrets.DOCS_REPOS_READ_TOKEN }}
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Checkout fantasy-browser-worker docs
+        if: >-
+          github.event_name != 'pull_request' ||
+          (github.event.pull_request.head.repo.full_name == github.repository &&
+           github.actor != 'dependabot[bot]')
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          repository: cvillarr23/fantasy-browser-worker
+          ref: main
+          path: .repo-docs/fantasy-browser-worker
+          token: ${{ secrets.DOCS_REPOS_READ_TOKEN }}
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Checkout fantasy-web-ui docs
+        if: >-
+          github.event_name != 'pull_request' ||
+          (github.event.pull_request.head.repo.full_name == github.repository &&
+           github.actor != 'dependabot[bot]')
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          repository: cvillarr23/fantasy-web-ui
+          ref: master
+          path: .repo-docs/fantasy-web-ui
+          token: ${{ secrets.DOCS_REPOS_READ_TOKEN }}
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Checkout fantasy-infra docs
+        if: >-
+          github.event_name != 'pull_request' ||
+          (github.event.pull_request.head.repo.full_name == github.repository &&
+           github.actor != 'dependabot[bot]')
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          repository: cvillarr23/fantasy-infra
+          ref: main
+          path: .repo-docs/fantasy-infra
+          token: ${{ secrets.DOCS_REPOS_READ_TOKEN }}
+          persist-credentials: false
+          fetch-depth: 0
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
+      - run: npm run test:actions
       - run: npm run build
+        env:
+          FANTASY_DOCS_ROOT: ${{ github.workspace }}/.repo-docs
+          # Fork and Dependabot builds validate the site and local placeholders.
+          FANTASY_DOCS_SITE_ONLY: ${{ github.event_name == 'pull_request' && (github.event.pull_request.head.repo.full_name != github.repository || github.actor == 'dependabot[bot]') }}
+          FANTASY_DOCS_REQUIRED: ${{ github.event_name != 'pull_request' || (github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]') }}
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: site
@@ -33,6 +108,9 @@ jobs:
     # Fork and Dependabot PRs don't get Actions secrets, so they build without deploying.
     if: >-
       github.event_name == 'push' ||
+      github.event_name == 'repository_dispatch' ||
+      github.event_name == 'schedule' ||
+      github.event_name == 'workflow_dispatch' ||
       (github.event.pull_request.head.repo.full_name == github.repository &&
        github.actor != 'dependabot[bot]')
     runs-on: ubuntu-latest
@@ -63,7 +141,7 @@ jobs:
           # main is the Pages production branch; any other branch is a preview.
           BRANCH: ${{ github.head_ref || github.ref_name }}
           COMMIT_HASH: ${{ github.event.pull_request.head.sha || github.sha }}
-          COMMIT_MESSAGE: ${{ github.event.pull_request.title || github.event.head_commit.message }}
+          COMMIT_MESSAGE: ${{ github.event.pull_request.title || github.event.head_commit.message || 'Rebuild repository docs' }}
         run: |
           npx wrangler pages deploy build \
             --project-name fantasy-project \

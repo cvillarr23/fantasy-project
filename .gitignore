@@ -3,3 +3,6 @@ node_modules/
 build/
 .docusaurus/
 .cache-loader/
+
+# Private source repository checkouts used in CI
+.repo-docs/
