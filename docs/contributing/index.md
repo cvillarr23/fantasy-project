@@ -1,18 +1,41 @@
 ---
 title: Contributing
-description: How to work on the fantasy-* repos and on these docs.
-sidebar_position: 6
+description: How to propose, build and ship a change across the fantasy-* repositories.
+sidebar_position: 0
 ---
 
-:::info[Stub]
+Fantasy Project is four code repositories plus this docs and planning repo. Anyone can contribute, human or coding agent. This section covers how a change goes from idea to merged PR.
 
-This section is a placeholder. It will cover:
-
-- Branches, pull requests and the ticket workflow on the wayfinder map.
-- Running each repo's tests and checks.
-
+:::tip[The short version]
+Find or open an issue → branch → write the test first → run the repo's checks → open a PR that closes the issue and updates `docs/`.
 :::
 
+```mermaid
+flowchart LR
+    I[Issue in an epic] --> B[Branch]
+    B --> T[Failing test]
+    T --> C[Code + docs]
+    C --> K[Local checks]
+    K --> P[PR: Fixes #N]
+    P --> M[Merge to default branch]
+    M --> D[Docs site rebuilds]
+```
+
+| I want to… | Read |
+|---|---|
+| Pick up or file work | [Tracker and ticket workflow](./workflow.md) |
+| Know what to run before a PR | [Checks and tests per repo](./checks.md) |
+| Understand `AGENTS.md` and `CLAUDE.md` | [Agent conventions](./agents.md) |
+| Write or edit a docs page | [Docs style guide](./docs-style-guide.md) |
+| Deploy or preview the docs site | [Docs site deploys](./docs-site-deploys.md) |
+| Report a vulnerability | [SECURITY.md](https://github.com/cvillarr23/fantasy-project/blob/main/SECURITY.md) |
+
+## Ground rules
+
+- Follow the [Code of Conduct](https://github.com/cvillarr23/fantasy-project/blob/main/CODE_OF_CONDUCT.md).
+- Read the [disclaimer](/disclaimer): the project is unofficial, for personal use on your own leagues, and doesn't scrape ESPN. Changes that collect data about other leagues or users, or that act at scale, won't be merged.
+- Never commit secrets or personal data: tokens, ESPN cookies (`espn_s2`, `SWID`), real league or member IDs, emails or hostnames from a real deployment. Use placeholders. See [No secrets or personal data](./docs-style-guide.md#no-secrets-or-personal-data).
+- Contributions are licensed under the repository's license (MIT).
 
 ## Working on these docs
 
@@ -24,6 +47,4 @@ npm start        # dev server with live reload
 npm run build    # production build; fails on broken links
 ```
 
-Follow the [docs style guide](./docs-style-guide.md) when adding or editing pages.
-
-See [repository security and public-release settings](./repository-security.md) for Actions permissions, dependency updates, and the default-branch ruleset.
+To build with all four source repos, set `FANTASY_DOCS_ROOT` to the directory holding the checkouts and `FANTASY_DOCS_REQUIRED=true`. See [Docs site deploys](./docs-site-deploys.md). For the default-branch ruleset and Actions settings, see [Repository security](./repository-security.md).

@@ -1,0 +1,17 @@
+name: Docs issue
+description: A page is wrong, missing or unclear
+labels: [documentation]
+body:
+  - type: input
+    id: page
+    attributes:
+      label: Page or path
+      placeholder: /overview/architecture
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: What's wrong or missing?
+    validations:
+      required: true

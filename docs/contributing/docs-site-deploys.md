@@ -1,7 +1,7 @@
 ---
 title: Docs site deploys
 description: How this site is deployed to Cloudflare Pages, how to roll back, and how Cloudflare Access protects it.
-sidebar_position: 4
+sidebar_position: 5
 ---
 
 This site is served by the Cloudflare Pages project `fantasy-project`, behind Cloudflare Access. Only the owner's identity can read it.
