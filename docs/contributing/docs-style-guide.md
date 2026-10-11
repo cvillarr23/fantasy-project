@@ -159,3 +159,15 @@ Never put real credentials or personal data in examples, screenshots or logs, ev
 - No personal identifiers: real names, emails, league or team IDs that identify a person, or IP addresses and hostnames from a real deployment.
 
 If something sensitive is committed, rotate it first. Removing it from the page does not remove it from Git history.
+
+### Queue contract explorer
+
+The [queue contract explorer](/reference/queues) renders core's `docs/asyncapi.yaml` with
+`@asyncapi/react-component`. The site imports the spec at build time from the same
+`FANTASY_DOCS_ROOT` checkout as core's prose; no broker connection is needed. The
+component loads in the browser using the package's browser bundle, which includes the
+parser's browser dependencies. A checkout without the spec shows a placeholder.
+
+Update message fields in core's spec and run its contract tests when publishers change.
+Keep delivery, idempotency and recovery prose in the source repos, linking to the
+explorer for field schemas and examples.
