@@ -1,112 +1,152 @@
 ---
 title: Architecture
-description: How the four fantasy-* services, their shared stores and the RabbitMQ queues fit together.
+description: How the four fantasy-* services, their shared stores, the RabbitMQ queues and the deployment pipeline fit together.
 sidebar_position: 1
 ---
 
-:::note
+The system decides roster moves in one service and carries them out against ESPN in another. Between them sit a RabbitMQ bus and Postgres, which records each action and its outcome. Use this page to find which component owns a step. Use [End-to-end flows](./flows/index.md) to follow one action through the system.
 
-This is a living doc. Update it as part of resolving wayfinder tickets on the [map](https://github.com/cvillarr23/fantasy-project/issues/1) — don't let it drift from what's actually been decided there.
-
+:::tip[The short version]
+- **Core decides and publishes.** `fantasy-core-pipeline` is the only service that publishes ESPN actions to RabbitMQ.
+- **The worker acts and verifies.** `fantasy-browser-worker` consumes queues, writes to ESPN, then re-reads ESPN to confirm the change.
+- **A person approves every trade.** No trade offer or response reaches ESPN without a human approving the exact terms. See the [Safety model](./safety-model.md).
 :::
 
-:::warning
+## What are the components?
 
-Three of the four repos' READMEs (`fantasy-infra`, `fantasy-browser-worker`, and previously `fantasy-core-pipeline` itself) link to `fantasy-core-pipeline/ARCHITECTURE.md` as "the" cross-repo architecture doc. That file does not exist in the repo — never committed. This page is written to become that missing doc; the dead links in the other three repos should eventually point here instead.
+```mermaid
+flowchart LR
+    user([You]) -->|HTTPS| proxy[oauth2-proxy]
+    proxy --> ui["web-ui<br/>(nginx + React)"]
+    ui -->|"/v1/* + X-API-Key"| api["core-pipeline<br/>FastAPI"]
+    cron["CronJobs"] -->|"solvers, ingestion,<br/>/v1/trigger/*"| api
+    api <--> pg[("Postgres")]
+    api <--> redis[("Redis")]
+    api -->|"lineup_updates, waiver_actions,<br/>draft_targets, trade_*"| mq[("RabbitMQ")]
+    mq -->|queue length| keda["KEDA<br/>ScaledJob"]
+    keda -->|one Job per message| worker["browser-worker<br/>bots"]
+    worker -->|"REST, Playwright,<br/>WebSocket"| espn(["ESPN"])
+    worker --> pg
+    worker <-->|draft feed| redis
+```
 
-:::
-
-## System overview
-
-Four services, one shared Postgres/Redis/RabbitMQ backing:
-
-| Repo | Role | Language |
+| Component | Repo | Role |
 |---|---|---|
-| `fantasy-core-pipeline` | Control plane: ingestion, VORP/optimization math, FastAPI gateway, the only thing that publishes to RabbitMQ | Python (FastAPI) |
-| `fantasy-browser-worker` | Execution layer: RabbitMQ consumers that drive ESPN's site via Playwright, plus the LLM-backed rumor digest/trade bots | Node.js (Playwright) |
-| `fantasy-web-ui` | Draft-day monitoring dashboard (SSE client), the first slice of a planned fuller console | React/TypeScript (Vite) |
-| `fantasy-infra` | GitOps: all four services' Kubernetes manifests, CronJob schedules, secrets wiring, dashboards | Kustomize, deployed via Argo CD from `homelab-deployment` |
+| Web UI | `fantasy-web-ui` | React console for lineups, waivers, trades, the inbox, activity and draft day. nginx serves it and proxies `/v1/*` to core. |
+| oauth2-proxy | `fantasy-infra` | Signs you in before any UI page or API call. The API itself doesn't check user identity. See [Authentication](/ui/auth). |
+| Core API | `fantasy-core-pipeline` | FastAPI control plane. It reads data for the UI, scores trades, records actions and publishes them to RabbitMQ. See the [API reference](/core/api-reference). |
+| Ingestion and solvers | `fantasy-core-pipeline` | Python modules run by CronJobs. They sync players, projections and scores, compute VORP, and pick lineups and waiver claims. See [Decision pipelines](/core/decision-pipelines). |
+| Browser worker | `fantasy-browser-worker` | Node.js bots that act on ESPN through its REST API, a Playwright browser or the draft-room WebSocket. See [Browser worker](/worker/). |
+| LLM chain | `fantasy-browser-worker` | Groq, then Gemini, then a self-hosted Ollama. The chain drafts trade packages, pitches and rumor digests. LLM output never reaches ESPN without human approval. |
+| Infrastructure | `fantasy-infra` | Kustomize manifests for every service, store, CronJob, dashboard and alert. |
 
-Shared stores (all in `fantasy-infra/base/databases/`): Postgres/TimescaleDB (`bot_admin` read-write, `grafana_reader` read-only role for dashboards — never the reverse), Redis (draft-day pub/sub + streams, idempotency, pause signaling), RabbitMQ (the only inter-service message bus — durable queues: `lineup_updates`, `waiver_actions`, `draft_targets`, `trade_evaluations`, `trade_negotiations`, and `llm_requests` (WORKER-16, browser-worker#34) — the last has no publisher yet, added ahead of a real caller).
+## Where is state kept?
 
-A shared, scale-to-zero Ollama deployment (`fantasy-infra/base/ollama/`) serves as the last-resort LLM tier for `fantasy-browser-worker` and doubles as the backend for the external `roo-coder` MCP server — both reach it through `homelab-deployment`'s KEDA HTTP Add-on interceptor via the same `Host` header, never scaling or calling it directly.
+| Store | Holds | Main writers |
+|---|---|---|
+| Postgres (TimescaleDB) | Players, projections, `weekly_stats` VORP, `league_rosters`, `draft_picks`, rumor signals | Core ingestion |
+| Postgres: activity tables | `activity_actions`, `activity_outbox`, `activity_events`: each queued action, its pending message and its timeline | Core API, worker |
+| Postgres: audit tables | `bot_decisions` (why core published) and `execution_log` (what the worker did, trade inbox rows, trade claims) | Core API, worker |
+| Redis | Draft-day pick stream, draft board, per-pick pause flags, draft-sync health | Draft sync, draft listener, core API |
+| RabbitMQ | Durable work queues, one per action type | Core publishes, worker consumes |
 
-## How the pieces talk to each other
+Grafana reads Postgres through a read-only `grafana_reader` role, never the read-write `bot_admin` role. Table definitions are in the [Data model](/core/data-model).
+
+## Which queues connect core and the worker?
+
+| Queue | Published by | Consumed by | Flow |
+|---|---|---|---|
+| `lineup_updates` | `POST /v1/trigger/lineup` | Lineup bot | [Lineup](./flows/lineup.md) |
+| `waiver_actions` | `POST /v1/trigger/waiver`; player sync injury alerts | Waiver sniper | [Waivers](./flows/waivers.md) |
+| `draft_targets` | `POST /v1/trigger/draft-pick` | Draft clicker | [Draft day](./flows/draft-day.md) |
+| `trade_submissions` | `POST /v1/trade/offers/{offer_key}/approve` | Trade builder | [Outgoing trades](./flows/outgoing-trades.md) |
+| `trade_responses` | `POST /v1/trade/incoming/{id}/decision` | Trade response | [Incoming trades](./flows/incoming-trades.md) |
+| `trade_negotiations` | `POST /v1/trade/incoming/{id}/counter` | Trade negotiation | [Incoming trades](./flows/incoming-trades.md) |
+| `trade_evaluations`, `trade_proposals`, `llm_requests` | No scheduled producer, or the worker itself | Trade bot, async LLM | Not part of a scheduled flow |
+
+The broker pre-declares `lineup_updates`, `waiver_actions` and `draft_targets` with dead-letter queues. Field-level contracts are in [Queue publishing](/core/queue-publishing) and [Message contracts](/worker/message-contracts).
+
+:::warning[Player ids come from two namespaces]
+`players.player_id` is Sleeper's id. ESPN ids are a separate, numerically overlapping namespace, crosswalked through `players.espn_id`. Every message bound for ESPN carries ESPN ids, and core rejects a Sleeper id with a 422. The trade evaluation and negotiation queues are the exception: they carry core's internal ids.
+:::
+
+## How does a queued message become a running bot?
+
+The worker is not a long-running service. KEDA watches each queue's length and starts one Kubernetes Job per waiting message, up to three at once. Each Job runs `src/index.js`, takes one message at a time and exits after 120 seconds idle. On draft day an overlay keeps one worker warm.
+
+Details, including acknowledgement and retry rules, are in [How bots run](/worker/how-bots-run).
+
+## What runs on a schedule?
+
+Every CronJob uses `America/Chicago` time except the session check, which uses UTC.
+
+| CronJob | Schedule | Runs | Feeds |
+|---|---|---|---|
+| `fantasy-weekly-ingestor` | Tue 16:00 | `sync_league` | Rosters and league settings |
+| `fantasy-sync-actual-scores` | Tue 17:05, plus a Fri 10:00 reconcile | `sync_actual_scores` | Actual points for scoring and backtests |
+| `fantasy-draft-prep-refresher` | Daily 18:00 | `sync_projections`, `sync_kicker_dst`, `vorp_matrix` | Upcoming-week projections and VORP |
+| `fantasy-lineup-optimizer` | Tue 19:15 | `lineup_solver` | [Lineup flow](./flows/lineup.md) |
+| `fantasy-weekly-waiver-trigger` | Tue 20:30 | `waiver_evaluator` | [Waiver flow](./flows/waivers.md) |
+| `fantasy-rumor-syncer` | Every 30 min | `sync_rumors` | Rumor signals |
+| `fantasy-rumor-action-trigger` | Daily 21:45 | `rumor_action_service` | Rumor-driven lineup and waiver triggers |
+| `fantasy-rapid-status-syncer` | Every 10 min, Thu, Sun and Mon | `sync_players` | Injury statuses and `waiver_actions` alerts |
+| `fantasy-stale-draft-job-sweeper` | Every 15 min | `sweep_stale_draft_jobs` | Cleans up leftover draft Jobs |
+| `rumor-digest-bot` | Daily 11:00 | `rumor_digest_bot.js` | LLM rumor digest |
+| `trade-inbox` | Every 2 h, 08:00–22:00 | `trade_inbox.js --refresh` | [Incoming trades](./flows/incoming-trades.md) |
+| `trade-scan` | Wed and Fri 13:00 | `trade_scan.js --stage` | [Outgoing trades](./flows/outgoing-trades.md) |
+| `espn-session-healthcheck` | Mon 06:00 UTC | `check_espn_session.js` | Early warning that ESPN cookies have expired |
+
+The Tuesday jobs form a chain: ingest, score, refresh VORP, then optimize the lineup and waivers. Each later job starts after the earlier one's deadline.
+
+## How does code reach the cluster?
 
 ```mermaid
-flowchart TD
-    subgraph Ingestion["core-pipeline: src/ingestion/"]
-        SP[sync_players] --> SXW[sync_id_crosswalk] --> SL[sync_league] --> SKD[sync_kicker_dst] --> SPR[sync_projections] --> ME[metrics_extractor]
-    end
-
-    ME --> VM["vorp_matrix\n(batch VORP + scarcity)"]
-    VM -->|weekly_stats.vorp_score| LS["lineup_solver\n(weekly ILP)"]
-    VM -.->|scarcity fns reused| DM["draft_matrix\n(live draft-day ILP)"]
-
-    RW["browser-worker\nXADD draft_picks:{leagueId}"] -->|Redis Stream| DM
-
-    LS -->|POST /v1/trigger/lineup| API[FastAPI Control Plane]
-    DM -->|POST /v1/trigger/draft-pick| API
-    RA["rumor digest bot\n(browser-worker)"] -->|writes rumor_signals| PG[(Postgres)]
-    RAT["CronJob: rumor-action trigger"] -->|POST /v1/trigger/rumor-action| API
-
-    API -->|lineup_updates| MQ[(RabbitMQ)]
-    API -->|draft_targets| MQ
-    API -->|waiver_actions| MQ
-
-    MQ --> LB[lineup_bot.js]
-    MQ --> WS[waiver_sniper.js]
-    MQ -.->|declared, not consumed yet -- WORKER-06| DC["draft_clicker.js\n(exists, unwired)"]
-
-    LB --> ESPN[ESPN fantasy site\nvia Playwright]
-    WS --> ESPN
-
-    UI["web-ui\nGET /v1/draft/stream (SSE)"] --> API
+flowchart LR
+    pr[Merged PR] -->|CI builds| ghcr[(GHCR images)]
+    ghcr -->|new digest| iu[Argo CD<br/>Image Updater]
+    iu -->|commits digest| infra[fantasy-infra<br/>overlays/production]
+    infra -->|auto-sync| argo[Argo CD]
+    argo -->|applies| k8s[Kubernetes]
+    bao[(OpenBao)] -->|External Secrets| k8s
 ```
 
-**Only `fantasy-core-pipeline` publishes to RabbitMQ.** Neither optimization module (`lineup_solver`, `draft_matrix`) publishes directly — both hand off through the FastAPI control plane, so `fantasy-browser-worker`'s bots only ever react to messages that passed through one API surface. This is the main architectural chokepoint and also the main safety property: there's exactly one place that decides "this action should actually execute against ESPN."
+| Step | Detail |
+|---|---|
+| Build | Each service repo's CI pushes an image to GitHub Container Registry. |
+| Image Updater | Watches GHCR and commits each new digest to the `images:` list in `overlays/production/kustomization.yaml`, as `chore(images): update … [argocd-image-updater]`. |
+| Argo CD | Syncs `overlays/production` automatically on every push. There's no manual `kubectl apply`. |
+| Draft Jobs | Core spawns draft Jobs at runtime from `DRAFT_SYNC_IMAGE` and `BROWSER_WORKER_IMAGE`. Kustomize copies both from the pinned Deployment and ScaledJob images, so they update together. |
+| Secrets | External Secrets materializes ESPN cookies, database passwords and API keys from OpenBao. No credential is committed. |
+| Draft day | The `overlays/draft-day` overlay adds CPU and memory headroom and a warm worker. |
 
-**Player id spaces do not match.** `players.player_id` is Sleeper's internal id; ESPN's id is a separate, numerically-overlapping namespace (`players.espn_id` is the crosswalk, ~845/1027 covered). `api/routes.py`'s `_reject_internal_player_id` exists specifically because the two spaces collide silently — ESPN id 12483 is Matthew Stafford, internal id 12483 is Jack Bech. Any code passing an id into browser-worker's ESPN-facing bots (`waiver_sniper.js`, `lineup_bot.js`) must translate through `espn_id` first; there's no runtime guard on the browser-worker side, only the one check in `core-pipeline`.
+A config change, such as flipping `AUTO_PUBLISH_IR_MOVES`, is a reviewed PR to `fantasy-infra`. See [Unattended IR publication](/infra/auto-publish-ir-moves).
 
-**LLM fallback chain** (`browser-worker/src/lib/llm_client.js`): Groq → Gemini → Ollama, in priority order, falling through on rate limit or failure. The Ollama leg deliberately uses `node:http`/`https` instead of `fetch` — `fetch` silently drops the `Host` header the KEDA interceptor needs to route/scale it.
+## How do I see what happened?
 
-`llm_client.js` also exports `startOllama()` (fires a cheap GET through the interceptor to trigger scale-up ahead of a known usage window, without blocking on the cold-start round trip) and `isOllamaReady()` (a passive readiness probe that deliberately *bypasses* the interceptor and hits the Ollama Service directly — routing a readiness check through the interceptor would itself trigger/extend scale-up). A separate module, `llm_async_queue.js`, layers a reusable async request/response interface on top — `requestLlmAsync()` / `getLlmRequestResult()` / `waitForLlmResult()` / `processAsyncLlmRequest()` — publishing onto the `llm_requests` queue and replying via a polled Postgres table (`llm_async_requests`, DDL owned by `fantasy-core-pipeline`) rather than an AMQP `replyTo` convention. Cross-repo contract for a Python publisher: `{ request_id: uuid, prompt: string, opts: {...} }` onto `llm_requests`, then poll `llm_async_requests` by `request_id`. This was built for WORKER-15's Discord chat interface, which closed `not_planned` and was rescoped to a web-UI panel (`core-pipeline#153`/`web-ui#97`) instead — so as of this writing, `llm_requests` has no publisher; see `browser-worker`'s WORKER-16 (CLAUDE.md) for the full rationale.
+| Signal | Where | Use it to |
+|---|---|---|
+| Traces | OpenTelemetry to Tempo. Queue messages carry a `traceparent`, so a worker span joins the API's trace. | Follow one action across core and the worker. |
+| Logs | Loki. Worker lines carry `trackingId` and `traceId`. | Read a bot run. See [Telemetry](/worker/telemetry). |
+| Dashboards | Grafana, provisioned from `fantasy-infra` ConfigMaps: bot decisions, execution log, draft pipeline, CronJob health, traces | Watch the system at a glance. |
+| Alerts | Grafana alert rules for failed or missed CronJobs and rumor-action outcomes | Get told when a schedule breaks. See [CronJob alerts](/infra/cronjob-alerts). |
+| Activity | `GET /v1/activity/actions` and the UI's Activity page | Check whether an action was delivered and verified. See [Activity submissions](/core/activity-api). |
 
-## Data flow: draft day
+`tracking_id` is the human-facing id for one action. Look it up in Activity, then search Loki for it.
 
-```mermaid
-sequenceDiagram
-    participant Worker as browser-worker (draft_sync.js)
-    participant Redis as Redis Stream
-    participant DM as draft_matrix listener
-    participant DB as Postgres
-    participant API as FastAPI
-    participant MQ as RabbitMQ
+## Known fragility
 
-    Worker->>Redis: XADD draft_picks:{leagueId}
-    DM->>Redis: XREADGROUP (consumer group)
-    DM->>DB: persist_draft_pick (ON CONFLICT DO NOTHING)
-    DM->>DM: recompute_scarcity_vorp + build_and_solve_draft_pick (ILP)
-    DM->>Redis: HSET draft:{leagueId}:board (recommendation visible to web-ui)
-    DM->>Redis: poll draft:{leagueId}:pause:{pickNumber}
-    alt human paused via web-ui
-        DM->>DM: skip auto-publish
-    else delay elapsed, not paused
-        DM->>API: POST /v1/trigger/draft-pick
-        API->>MQ: publish draft_targets (durable)
-    end
-    DM->>Redis: XACK
-```
+| Risk | Why it matters |
+|---|---|
+| ESPN's protocol is reverse-engineered | ESPN can change endpoints, selectors or the draft WebSocket without notice. Bots fail closed, but a change stops that action until someone updates the worker. See [ESPN reverse-engineering notes](/worker/espn-reverse-engineering). |
+| ESPN session cookies expire | Every write needs valid `espn_s2` and `SWID` cookies. The Monday session check gives early warning. |
+| Write routes trust the network | `/v1/trigger/*` and the trade inbox writes need `X-API-Key`. Other routes, including outgoing trade approval, rely on oauth2-proxy and the cluster boundary. |
+| RabbitMQ user provisioning | The broker image doesn't create users from environment variables once definitions are loaded. An initContainer renders the user into the definitions on every boot. |
+| Kubernetes calls from the API | The draft endpoints call the Kubernetes API directly. The UI wraps its calls in timeouts because a degraded control plane may never respond. |
 
-`draft_targets` is declared in RabbitMQ and `draft_clicker.js` already exists in `fantasy-browser-worker`, but the two aren't wired together yet (WORKER-06/INFRA-07) — publishes to that queue currently have no consumer.
+## Related
 
-## Auth & exposure
-
-`fantasy-web-ui` sits behind an `oauth2-proxy` deployment (`fantasy-infra/base/oauth2-proxy/`) — not open to the internet unauthenticated. `fantasy-core-pipeline`'s FastAPI control plane has no equivalent auth layer of its own visible in this repo; anything that can reach the in-cluster Service can call `/v1/trigger/*`.
-
-## Known fragility (already load-bearing, documented where it bit before)
-
-- **RabbitMQ user provisioning**: `RABBITMQ_DEFAULT_USER`/`_PASS` env vars do **not** create a user on this image once `management.load_definitions` is in play — the broker previously booted with zero users and refused every connection (`/v1/health` → 403 `ACCESS_REFUSED`) until `render-definitions.py` (an initContainer) was added to merge a freshly-computed password hash into the queue definitions on every boot.
-- **Kubernetes API calls with no timeout**: several `fantasy-core-pipeline` draft endpoints call the Kubernetes apiserver directly (`src/api/draft.py`); `web-ui`'s own `client.ts` already wraps its calls in `AbortSignal.timeout` specifically because "the control plane degrades and they simply never respond" is a real observed failure mode, not a hypothetical.
-- **`src/api/routes.py` and `src/api/draft.py`** mix AMQP publish, Redis idempotency, and Kubernetes Job orchestration inline rather than going through a service layer like every other router — self-documented in `fantasy-core-pipeline/CLAUDE.md` as a known gap needing "its own design pass." Tracked as [fantasy-project#5](https://github.com/cvillarr23/fantasy-project/issues/5).
-- **ESPN itself**: the entire execution layer depends on an undocumented, reverse-engineered protocol (`fantasy-browser-worker/docs/espn-reverse-engineering.md`) that ESPN can change without notice. This is the single largest external risk in the system and isn't mitigated by anything short of ongoing vigilance.
+- [End-to-end flows](./flows/index.md)
+- [Safety model](./safety-model.md)
+- [Decision pipelines](/core/decision-pipelines)
+- [How bots run](/worker/how-bots-run)
+- [fantasy-infra README](https://github.com/cvillarr23/fantasy-infra#readme)
