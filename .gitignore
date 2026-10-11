@@ -6,3 +6,6 @@ build/
 
 # Private source repository checkouts used in CI
 .repo-docs/
+
+# Core API explorer pages, generated from core's openapi.json at build time
+generated/

@@ -1,0 +1,17 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Core API (placeholder)",
+    "description": "Placeholder used when no fantasy-core-pipeline checkout is available. Check out its docs/ folder beside this site to see the real API.",
+    "version": "0.0.0"
+  },
+  "paths": {
+    "/v1/health": {
+      "get": {
+        "tags": ["Health"],
+        "summary": "Check the API",
+        "responses": {"200": {"description": "OK"}}
+      }
+    }
+  }
+}
