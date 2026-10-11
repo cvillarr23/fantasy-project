@@ -47,6 +47,32 @@ const repoDocsPlugins: NonNullable<Config['plugins']> = repositories.map((repo) 
   } satisfies DocsOptions];
 });
 
+// The core API explorer is generated from core's docs/openapi.json (see
+// scripts/gen-core-api.mjs) into a gitignored folder and served under /core/api.
+const coreApiPlugins: NonNullable<Config['plugins']> = [
+  ['@docusaurus/plugin-content-docs', {
+    id: 'core-api',
+    path: 'generated/core-api',
+    routeBasePath: 'core/api',
+    sidebarPath: './sidebars-core-api.ts',
+    docItemComponent: '@theme/ApiItem',
+  } satisfies DocsOptions],
+  ['docusaurus-plugin-openapi-docs', {
+    id: 'openapi',
+    docsPluginId: 'core-api',
+    config: {
+      core: {
+        specPath: 'generated/core-api-spec.json',
+        outputDir: 'generated/core-api/endpoints',
+        sidebarOptions: {groupPathsBy: 'tag', categoryLinkSource: 'tag'},
+        // The API is internal to the cluster and this site is static behind
+        // Cloudflare Access, so browser requests would fail.
+        hideSendButton: true,
+      },
+    },
+  }],
+];
+
 const config: Config = {
   title: 'Fantasy Project',
   tagline: 'How the fantasy-* services fit together',
@@ -82,6 +108,7 @@ const config: Config = {
 
   themes: [
     '@docusaurus/theme-mermaid',
+    'docusaurus-theme-openapi-docs',
     [
       '@easyops-cn/docusaurus-search-local',
       {
@@ -112,7 +139,7 @@ const config: Config = {
     ],
   ],
 
-  plugins: repoDocsPlugins,
+  plugins: [...repoDocsPlugins, ...coreApiPlugins],
 
   themeConfig: {
     colorMode: {

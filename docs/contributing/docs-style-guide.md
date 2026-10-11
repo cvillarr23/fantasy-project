@@ -126,6 +126,26 @@ and manual rebuilds.
 Every source repo's PR template asks **Docs updated?** Update its docs alongside
 changes to behavior, API, configuration or workflows, or explain why none are needed.
 
+### Core API explorer
+
+The pages under `/core/api` are generated, not written. On every `npm run build` and
+`npm start`, `scripts/gen-core-api.mjs` reads core's `docs/openapi.json`, groups
+untagged routes by their `/v1/<area>` segment and writes one page per endpoint into
+the gitignored `generated/` folder. Change the spec in core, not the pages.
+
+| Task | Do this |
+|---|---|
+| Update the explorer | Merge the spec change in core. The next site build picks it up. |
+| Preview a spec change | Run `npm start` with `FANTASY_DOCS_ROOT` pointing at your core checkout. |
+| Edit the landing page | Edit `content/core-api-index.mdx`. |
+| Change sidebar groups | Add `tags` to the route in core. |
+
+:::note[No live requests]
+The explorer's "Send API request" button is off. The site is static behind Cloudflare
+Access and the API is only reachable inside the cluster. Use the running API's own
+FastAPI `/docs` for live calls.
+:::
+
 ## Diagrams
 
 Draw diagrams in Mermaid in a fenced `mermaid` code block. Don't commit diagram images. Mermaid diagrams render in light and dark mode and can be diffed and edited in review.
