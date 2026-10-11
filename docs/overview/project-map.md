@@ -1,7 +1,7 @@
 ---
 title: Project map
 description: Open epics across the fantasy-* repos with their progress and priority, generated from GitHub.
-sidebar_position: 3
+sidebar_position: 4
 ---
 
 :::note

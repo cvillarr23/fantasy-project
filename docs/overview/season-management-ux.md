@@ -1,7 +1,7 @@
 ---
 title: Season management rollout
 description: What the season management UX overhaul delivered across the web UI, core API and worker, and how to roll it out.
-sidebar_position: 4
+sidebar_position: 5
 ---
 
 ## Delivered behavior

@@ -44,7 +44,7 @@ def main():
     lines.append("---")
     lines.append("title: Project map")
     lines.append("description: Open epics across the fantasy-* repos with their progress and priority, generated from GitHub.")
-    lines.append("sidebar_position: 3")
+    lines.append("sidebar_position: 4")
     lines.append("---")
     lines.append("")
     lines.append(":::note")
