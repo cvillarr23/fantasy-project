@@ -1,0 +1,16 @@
+---
+title: Queue contract explorer
+description: Browse RabbitMQ message schemas and examples published by core and consumed by the browser worker.
+sidebar_position: 3
+slug: /reference/queues
+---
+
+import QueueContracts from '@site/src/components/QueueContracts';
+
+Browse the six queues core publishes, including both message types on `waiver_actions`. This explorer imports core's maintained AsyncAPI 3.0 spec at build time.
+
+:::tip[Delivery and recovery]
+For delivery guarantees, idempotency and retries, see [Core docs](/core/). For consumers and queue ownership, see [Worker docs](/worker/).
+:::
+
+<QueueContracts />
