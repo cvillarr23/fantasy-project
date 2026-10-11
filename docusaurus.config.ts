@@ -2,7 +2,7 @@ import {themes as prismThemes} from 'prism-react-renderer';
 import type {Config} from '@docusaurus/types';
 import type * as Preset from '@docusaurus/preset-classic';
 import type {Options as DocsOptions} from '@docusaurus/plugin-content-docs';
-import {existsSync} from 'node:fs';
+import {existsSync, readFileSync} from 'node:fs';
 import path from 'node:path';
 
 const repoUrl = 'https://github.com/cvillarr23/fantasy-project';
@@ -139,7 +139,24 @@ const config: Config = {
     ],
   ],
 
-  plugins: [...repoDocsPlugins, ...coreApiPlugins],
+  plugins: [
+    ...repoDocsPlugins,
+    ...coreApiPlugins,
+    function queueContracts() {
+      const specPath = path.resolve(process.env.FANTASY_DOCS_ROOT ?? '..', 'fantasy-core-pipeline/docs/asyncapi.yaml');
+      return {
+        name: 'queue-contracts',
+        getPathsToWatch: () => [specPath],
+        async loadContent() {
+          return process.env.FANTASY_DOCS_SITE_ONLY !== 'true' && existsSync(specPath)
+            ? readFileSync(specPath, 'utf8') : null;
+        },
+        async contentLoaded({content, actions}) {
+          actions.setGlobalData({schema: content});
+        },
+      };
+    },
+  ],
 
   themeConfig: {
     colorMode: {
