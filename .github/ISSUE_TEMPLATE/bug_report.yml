@@ -1,0 +1,33 @@
+name: Bug report
+description: Something isn't working as documented
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Don't include secrets, ESPN cookies, real league or member IDs, emails or hostnames. Use placeholders.
+  - type: dropdown
+    id: repo
+    attributes:
+      label: Affected area
+      options: [docs site, core-pipeline, browser-worker, web-ui, infra, not sure]
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      placeholder: "1. …\n2. …"
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or screenshots (redacted)
+      render: shell
