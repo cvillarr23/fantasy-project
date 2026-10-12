@@ -14,7 +14,10 @@ function fixture(t, license, files) {
   fs.writeFileSync(path.join(root, 'package.json'), JSON.stringify({ name: 'fixture', version: '1.0.0' }));
   const dependency = path.join(root, 'node_modules/example');
   fs.mkdirSync(dependency, { recursive: true });
-  for (const [name, content] of Object.entries(files)) fs.writeFileSync(path.join(dependency, name), content);
+  for (const [name, content] of Object.entries(files)) {
+    fs.mkdirSync(path.dirname(path.join(dependency, name)), { recursive: true });
+    fs.writeFileSync(path.join(dependency, name), content);
+  }
   const packages = {
     'example@1.2.3': { licenses: license, path: dependency, licenseFile: files.LICENSE ? path.join(dependency, 'LICENSE') : undefined },
   };
@@ -25,11 +28,11 @@ function fixture(t, license, files) {
 }
 
 test('static distributions retain the project license, multiple license texts and upstream NOTICE', (t) => {
-  const { root, run } = fixture(t, 'Apache-2.0 OR MIT', { LICENSE: 'Apache text', 'LICENSE-MIT': 'MIT text', NOTICE: 'Required attribution' });
+  const { root, run } = fixture(t, 'Apache-2.0 OR MIT', { LICENSE: 'Apache text', 'LICENSE-MIT': 'MIT text', NOTICE: 'Required attribution', 'lib-vendor/component/LICENSE': 'Vendored copyright' });
   assert.equal(run().status, 0);
   assert.equal(fs.readFileSync(path.join(root, 'static/LICENSE.txt'), 'utf8'), 'Project MIT license\n');
   const notices = fs.readFileSync(path.join(root, 'static/THIRD_PARTY_LICENSES.txt'), 'utf8');
-  for (const text of ['Apache text', 'MIT text', 'Required attribution', 'https://registry.npmjs.org/example/-/example-1.2.3.tgz']) assert.ok(notices.includes(text));
+  for (const text of ['Apache text', 'MIT text', 'Required attribution', 'lib-vendor/component/LICENSE', 'Vendored copyright', 'https://registry.npmjs.org/example/-/example-1.2.3.tgz']) assert.ok(notices.includes(text));
 });
 
 test('unknown license metadata prevents a distribution', (t) => {

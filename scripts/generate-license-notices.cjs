@@ -10,6 +10,17 @@ const overrides = fs.existsSync(overridesFile)
   ? JSON.parse(fs.readFileSync(overridesFile, 'utf8'))
   : {};
 
+function collectNotices(directory, files) {
+  for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+    const fullPath = path.join(directory, entry.name);
+    if (entry.isDirectory() && entry.name !== 'node_modules' && entry.name !== '.git') {
+      collectNotices(fullPath, files);
+    } else if (entry.isFile() && /^(licen[cs]e|copying|notice)([._-]|$)/i.test(entry.name)) {
+      files.add(fullPath);
+    }
+  }
+}
+
 checker.init({ start: root, production: true, excludePackages: `${project.name}@${project.version}` }, (error, packages) => {
   if (error) throw error;
   const notices = [];
@@ -19,13 +30,8 @@ checker.init({ start: root, production: true, excludePackages: `${project.name}@
     }
     const files = new Set();
     if (info.licenseFile && fs.readFileSync(info.licenseFile, 'utf8').trim()) files.add(info.licenseFile);
-    // Preserve additional license choices and Apache NOTICE files alongside the detected license.
-    for (const file of fs.readdirSync(info.path)) {
-      const fullPath = path.join(info.path, file);
-      if (/^(licen[cs]e|copying|notice)([._-]|$)/i.test(file) && fs.statSync(fullPath).isFile()) {
-        files.add(fullPath);
-      }
-    }
+    // Vendored components can carry license and NOTICE files below the package root.
+    collectNotices(info.path, files);
     if (overrides[name]) files.add(path.join(__dirname, overrides[name].file));
     if (!files.size) throw new Error(`No license text for ${name}; add a reviewed license override`);
     const separator = name.lastIndexOf('@');
@@ -36,7 +42,10 @@ checker.init({ start: root, production: true, excludePackages: `${project.name}@
     for (const file of [...files].sort()) {
       const text = fs.readFileSync(file, 'utf8').trim();
       if (!text) throw new Error(`Empty license/notice file for ${name}: ${file}`);
-      notices.push(`--- ${path.basename(file)} ---\n${text}\n`);
+      const label = file.startsWith(`${info.path}${path.sep}`)
+        ? path.relative(info.path, file)
+        : path.basename(file);
+      notices.push(`--- ${label} ---\n${text}\n`);
     }
   }
   fs.mkdirSync(output, { recursive: true });
