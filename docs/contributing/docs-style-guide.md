@@ -1,7 +1,7 @@
 ---
 title: Docs style guide
 description: Conventions for writing and placing pages on this site.
-sidebar_position: 1
+sidebar_position: 4
 ---
 
 :::tip[The short version]

@@ -1,7 +1,7 @@
 ---
 title: Repository security and public-release settings
 description: Actions permissions, dependency updates, and the default-branch ruleset for the public repositories.
-sidebar_position: 3
+sidebar_position: 6
 ---
 
 ## Actions and dependencies
