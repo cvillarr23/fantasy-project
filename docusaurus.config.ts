@@ -206,7 +206,10 @@ const config: Config = {
         },
         {
           title: 'About',
-          items: [{label: 'Disclaimer and scope', to: '/disclaimer'}],
+          items: [
+            {label: 'Disclaimer and scope', to: '/disclaimer'},
+            {label: 'Licensing', to: '/contributing/licensing'},
+          ],
         },
       ],
     },

@@ -1,0 +1,34 @@
+{
+  "@algolia/autocomplete-shared@1.19.12": {
+    "file": "license-texts/algolia.txt",
+    "source": "https://github.com/algolia/autocomplete/blob/HEAD/LICENSE"
+  },
+  "@algolia/autocomplete-shared@1.19.2": {
+    "file": "license-texts/algolia.txt",
+    "source": "https://github.com/algolia/autocomplete/blob/HEAD/LICENSE"
+  },
+  "@asyncapi/parser@3.6.3": {
+    "file": "license-texts/asyncapi-parser.txt",
+    "source": "https://github.com/asyncapi/parser-js/blob/HEAD/LICENSE"
+  },
+  "infima@0.2.0-alpha.45": {
+    "file": "license-texts/infima.txt",
+    "source": "https://github.com/facebookincubator/infima/blob/HEAD/LICENSE"
+  },
+  "@pnpm/config.env-replace@1.1.0": {
+    "file": "license-texts/pnpm-components.txt",
+    "source": "https://github.com/pnpm/components/blob/HEAD/LICENSE"
+  },
+  "@pnpm/network.ca-file@1.0.2": {
+    "file": "license-texts/pnpm-components.txt",
+    "source": "https://github.com/pnpm/components/blob/HEAD/LICENSE"
+  },
+  "tr46@0.0.3": {
+    "file": "license-texts/tr46.txt",
+    "source": "https://github.com/jsdom/tr46/blob/HEAD/LICENSE.md"
+  },
+  "@stoplight/spectral-runtime@1.1.6": {
+    "file": "license-texts/spectral.txt",
+    "source": "https://github.com/stoplightio/spectral/blob/HEAD/LICENSE"
+  }
+}

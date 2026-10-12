@@ -23,3 +23,11 @@ after docs changes, with a nightly fallback.
 See [the docs style guide](docs/contributing/docs-style-guide.md) before adding
 pages and [docs site deploys](docs/contributing/docs-site-deploys.md) for credentials
 and rebuild instructions.
+
+## License
+
+Code, configuration and documentation are licensed under the [MIT License](LICENSE).
+Third-party dependencies retain their own licenses.
+The docs build includes `LICENSE.txt` and `THIRD_PARTY_LICENSES.txt` with the static assets.
+See [licensing and dependency notices](docs/contributing/licensing.md) for audit results
+and redistribution requirements.

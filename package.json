@@ -1,4 +1,5 @@
 {
+  "license": "MIT",
   "name": "fantasy-project-docs",
   "version": "0.0.0",
   "private": true,
@@ -7,12 +8,13 @@
     "gen:core-api": "node scripts/gen-core-api.mjs",
     "prestart": "npm run gen:core-api",
     "start": "docusaurus start",
-    "prebuild": "npm run gen:core-api",
+    "prebuild": "npm run licenses:generate && npm run gen:core-api",
     "build": "docusaurus build",
     "serve": "docusaurus serve",
     "clear": "docusaurus clear",
     "typecheck": "tsc",
-    "test:actions": "node --test tests/*.test.cjs"
+    "test:actions": "node --test tests/*.test.cjs",
+    "licenses:generate": "node scripts/generate-license-notices.cjs static"
   },
   "dependencies": {
     "@asyncapi/react-component": "3.2.1",
@@ -34,6 +36,7 @@
     "@docusaurus/tsconfig": "3.10.2",
     "@docusaurus/types": "3.10.2",
     "@types/react": "^19.0.0",
+    "license-checker": "25.0.1",
     "typescript": "~6.0.2",
     "wrangler": "4.149.0"
   },

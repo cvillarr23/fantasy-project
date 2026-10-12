@@ -27,3 +27,6 @@ npm run build    # production build; fails on broken links
 Follow the [docs style guide](./docs-style-guide.md) when adding or editing pages.
 
 See [repository security and public-release settings](./repository-security.md) for Actions permissions, dependency updates, and the default-branch ruleset.
+
+See [licensing and dependency notices](./licensing.md) for the shared MIT license,
+dependency exceptions and checks before distributing builds.
