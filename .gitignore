@@ -9,3 +9,7 @@ build/
 
 # Core API explorer pages, generated from core's openapi.json at build time
 generated/
+
+# License artifacts generated for static distributions
+/static/LICENSE.txt
+/static/THIRD_PARTY_LICENSES.txt

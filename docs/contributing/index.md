@@ -28,6 +28,7 @@ flowchart LR
 | Understand `AGENTS.md` and `CLAUDE.md` | [Agent conventions](./agents.md) |
 | Write or edit a docs page | [Docs style guide](./docs-style-guide.md) |
 | Deploy or preview the docs site | [Docs site deploys](./docs-site-deploys.md) |
+| Check licenses before distributing builds | [Licensing and dependency notices](./licensing.md) |
 
 ## Ground rules
 
