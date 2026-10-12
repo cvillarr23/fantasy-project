@@ -85,6 +85,25 @@ jobs:
           token: ${{ secrets.DOCS_REPOS_READ_TOKEN }}
           persist-credentials: false
           fetch-depth: 0
+      # The component library is published at /ui/components/ (scripts/add-ui-components.mjs).
+      # web-ui's CI runs on Node 22, so build it with that before switching to the site's Node.
+      - name: Set up Node for the web-ui component library
+        if: >-
+          github.event_name != 'pull_request' ||
+          (github.event.pull_request.head.repo.full_name == github.repository &&
+           github.actor != 'dependabot[bot]')
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: .repo-docs/fantasy-web-ui/package-lock.json
+      - name: Build the web-ui component library
+        if: >-
+          github.event_name != 'pull_request' ||
+          (github.event.pull_request.head.repo.full_name == github.repository &&
+           github.actor != 'dependabot[bot]')
+        working-directory: .repo-docs/fantasy-web-ui
+        run: npm ci && npm run build-storybook
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version-file: .nvmrc

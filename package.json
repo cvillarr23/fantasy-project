@@ -10,6 +10,7 @@
     "start": "docusaurus start",
     "prebuild": "npm run licenses:generate && npm run gen:core-api",
     "build": "docusaurus build",
+    "postbuild": "node scripts/add-ui-components.mjs",
     "serve": "docusaurus serve",
     "clear": "docusaurus clear",
     "typecheck": "tsc",

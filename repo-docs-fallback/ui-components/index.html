@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Component library | Fantasy Project</title>
+  <style>
+    body { font: 16px/1.6 system-ui, sans-serif; max-width: 42rem; margin: 3rem auto; padding: 0 1rem; color: #1c1e21; background: #fff; }
+    @media (prefers-color-scheme: dark) { body { color: #e3e3e3; background: #1b1b1d; } a { color: #8cc8ff; } }
+    code { font-size: 0.9em; }
+  </style>
+</head>
+<body>
+  <h1>Component library</h1>
+  <p>The web UI's Storybook component library is built from
+    <a href="https://github.com/cvillarr23/fantasy-web-ui">fantasy-web-ui</a> at site build time.
+    This build didn't include it.</p>
+  <p>To see it locally, run <code>npm ci &amp;&amp; npm run build-storybook</code> in a fantasy-web-ui
+    checkout beside this site, or set <code>FANTASY_DOCS_ROOT</code> to the directory containing your
+    source checkouts, then run <code>npm run build</code> again. CI builds it from the repository's
+    default branch.</p>
+  <p><a href="/ui/">Back to the UI docs</a></p>
+</body>
+</html>
