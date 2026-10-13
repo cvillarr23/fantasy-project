@@ -126,6 +126,19 @@ and manual rebuilds.
 Every source repo's PR template asks **Docs updated?** Update its docs alongside
 changes to behavior, API, configuration or workflows, or explain why none are needed.
 
+### Web UI component library
+
+The pages under `/ui/components/` are fantasy-web-ui's Storybook build, not docs pages.
+The docs build runs `npm ci && npm run build-storybook` in the web-ui checkout, then
+`scripts/add-ui-components.mjs` copies `storybook-static/` into `build/ui/components/`
+after `docusaurus build`. A build without it gets a placeholder page.
+
+| Task | Do this |
+|---|---|
+| Update the library | Merge the component or story change in fantasy-web-ui. Its dispatch also fires on `src/**` changes. |
+| Preview it locally | Run `npm run build-storybook` in the web-ui checkout, then `npm run build` and `npm run serve` here. `npm start` doesn't include it. |
+| Link to it | Use `pathname:///ui/components/`. A plain `/ui/components/` link fails the broken-link check, because it isn't a docs route. |
+
 ### Core API explorer
 
 The pages under `/core/api` are generated, not written. On every `npm run build` and

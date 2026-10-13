@@ -34,7 +34,7 @@ flowchart LR
 
 | Job | What it does |
 |---|---|
-| `build` | Checks out each source repo's `docs/` at its default branch using `DOCS_REPOS_READ_TOKEN`. Runs `npm ci` and `npm run build`, then uploads `build/` as an artifact. It has no deployment credentials and is the required check. |
+| `build` | Checks out each source repo's `docs/` at its default branch using `DOCS_REPOS_READ_TOKEN`. Builds the web UI's Storybook component library in its checkout on Node 22. Runs `npm ci` and `npm run build`, which copies the library to `/ui/components/`, then uploads `build/` as an artifact. It has no deployment credentials and is the required check. |
 | `deploy` | Downloads the artifact and runs `wrangler pages deploy`, using the `wrangler` version pinned in `package.json`. |
 
 | Trigger | Result |
@@ -118,7 +118,7 @@ The site rebuilds nightly at **08:17 UTC** even without a notification. To rebui
 gh workflow run docs-build.yml --repo cvillarr23/fantasy-project --ref main
 ```
 
-Trusted builds fail if the read secret or any source checkout is missing. A local checkout without a sibling repo shows a placeholder for that section.
+Trusted builds fail if the read secret, any source checkout or the web UI component library build is missing. A local checkout without a sibling repo shows a placeholder for that section. Without `fantasy-web-ui/storybook-static`, `/ui/components/` shows a placeholder; run `npm run build-storybook` in the web-ui checkout to include it.
 
 To validate all four sections locally, clone or update the sibling repos and run:
 

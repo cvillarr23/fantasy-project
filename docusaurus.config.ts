@@ -27,7 +27,13 @@ const repoDocsPlugins: NonNullable<Config['plugins']> = repositories.map((repo) 
     routeBasePath: repo.id,
     sidebarPath: './sidebars.ts',
     sidebarItemsGenerator: async (args) => {
-      const items = await args.defaultSidebarItemsGenerator(args);
+      const generated = await args.defaultSidebarItemsGenerator(args);
+      // The web-ui Storybook build is copied to /ui/components/ after the site build
+      // (scripts/add-ui-components.mjs). pathname:// makes it a plain link to that static
+      // directory rather than a client-side route.
+      const items = repo.id === 'ui'
+        ? [...generated, {type: 'link' as const, label: 'Component library', href: 'pathname:///ui/components/'}]
+        : generated;
       // Repos without an index page still need a landing route for site navigation.
       if (available && !['index.md', 'index.mdx'].some((file) => existsSync(path.join(source, file)))) {
         return [{

@@ -85,6 +85,31 @@ jobs:
           token: ${{ secrets.DOCS_REPOS_READ_TOKEN }}
           persist-credentials: false
           fetch-depth: 0
+      # The component library is published at /ui/components/ (scripts/add-ui-components.mjs).
+      # web-ui's CI runs on Node 22, so build it with that before switching to the site's Node.
+      - name: Set up Node for the web-ui component library
+        if: >-
+          github.event_name != 'pull_request' ||
+          (github.event.pull_request.head.repo.full_name == github.repository &&
+           github.actor != 'dependabot[bot]')
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: .repo-docs/fantasy-web-ui/package-lock.json
+      - name: Build the web-ui component library
+        if: >-
+          github.event_name != 'pull_request' ||
+          (github.event.pull_request.head.repo.full_name == github.repository &&
+           github.actor != 'dependabot[bot]')
+        # Build outside this repository: nested here, Vite's tsconfig lookup reaches the site's
+        # tsconfig.json, which extends a package that isn't installed yet, and the build fails.
+        run: |
+          build_dir="$RUNNER_TEMP/fantasy-web-ui"
+          rm -rf "$build_dir"
+          cp -R .repo-docs/fantasy-web-ui "$build_dir"
+          (cd "$build_dir" && npm ci && npm run build-storybook)
+          mv "$build_dir/storybook-static" .repo-docs/fantasy-web-ui/storybook-static
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
