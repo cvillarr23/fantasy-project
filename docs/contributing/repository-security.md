@@ -118,9 +118,9 @@ To require them later, first replace workflow-level path filters with jobs that 
 Move to hosted runners as part of the flip, in this order:
 
 1. Merge each repository's "Run every workflow on GitHub-hosted runners" PR. These are draft PRs that refer to [#60](https://github.com/cvillarr23/fantasy-project/issues/60).
-2. Merge the `homelab-deployment` PR that removes `apps/arc-runners`. Argo CD prunes the scale sets, and actions-runner-controller deregisters them from GitHub.
+2. Merge the `homelab-deployment` PR that removes the runner scale sets. Argo CD prunes them, and actions-runner-controller deregisters them from GitHub.
 3. Confirm that `gh api repos/cvillarr23/<repo>/actions/runners --jq .total_count` returns `0` for each repository.
-4. Uninstall the actions-runner-controller GitHub App from the five repositories, and delete its private key from OpenBao (`secret/arc/github-app`).
+4. Then remove the rest of `apps/arc-runners` from `homelab-deployment`, uninstall the actions-runner-controller GitHub App from the five repositories, and delete its private key from OpenBao (`secret/arc/github-app`).
 
 Before the flip, check that `grep -rn fantasy-runners .github` is empty on each default branch. New workflows added since the switch PRs were opened must use `ubuntu-latest` too.
 
