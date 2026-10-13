@@ -14,9 +14,20 @@ const repositories = [
   {id: 'infra', name: 'fantasy-infra', branch: 'main', label: 'Infra'},
 ];
 
+const repoDocsSource = (repo: (typeof repositories)[number]) =>
+  path.resolve(process.env.FANTASY_DOCS_ROOT ?? '..', repo.name, 'docs');
+const repoDocsAvailable = (repo: (typeof repositories)[number]) =>
+  process.env.FANTASY_DOCS_SITE_ONLY !== 'true' && existsSync(repoDocsSource(repo));
+
+// A placeholder section is a single index page, so every link into that
+// repo's docs breaks. Builds without the other checkouts (Dependabot and fork
+// PRs, local runs) still report broken links, but as warnings; full builds
+// keep failing on them.
+const brokenLinkSeverity = repositories.every(repoDocsAvailable) ? 'throw' : 'warn';
+
 const repoDocsPlugins: NonNullable<Config['plugins']> = repositories.map((repo) => {
-  const source = path.resolve(process.env.FANTASY_DOCS_ROOT ?? '..', repo.name, 'docs');
-  const available = process.env.FANTASY_DOCS_SITE_ONLY !== 'true' && existsSync(source);
+  const source = repoDocsSource(repo);
+  const available = repoDocsAvailable(repo);
   if (!available && process.env.FANTASY_DOCS_REQUIRED === 'true') {
     throw new Error(`Missing ${source}. Check DOCS_REPOS_READ_TOKEN and the repository checkouts.`);
   }
@@ -94,8 +105,8 @@ const config: Config = {
   organizationName: 'cvillarr23',
   projectName: 'fantasy-project',
 
-  onBrokenLinks: 'throw',
-  onBrokenAnchors: 'throw',
+  onBrokenLinks: brokenLinkSeverity,
+  onBrokenAnchors: brokenLinkSeverity,
 
   i18n: {
     defaultLocale: 'en',
