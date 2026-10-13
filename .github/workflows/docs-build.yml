@@ -102,8 +102,14 @@ jobs:
           github.event_name != 'pull_request' ||
           (github.event.pull_request.head.repo.full_name == github.repository &&
            github.actor != 'dependabot[bot]')
-        working-directory: .repo-docs/fantasy-web-ui
-        run: npm ci && npm run build-storybook
+        # Build outside this repository: nested here, Vite's tsconfig lookup reaches the site's
+        # tsconfig.json, which extends a package that isn't installed yet, and the build fails.
+        run: |
+          build_dir="$RUNNER_TEMP/fantasy-web-ui"
+          rm -rf "$build_dir"
+          cp -R .repo-docs/fantasy-web-ui "$build_dir"
+          (cd "$build_dir" && npm ci && npm run build-storybook)
+          mv "$build_dir/storybook-static" .repo-docs/fantasy-web-ui/storybook-static
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version-file: .nvmrc
