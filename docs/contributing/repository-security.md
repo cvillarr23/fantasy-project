@@ -1,10 +1,28 @@
 ---
 title: Repository security and public-release settings
-description: Actions permissions, dependency updates, and the default-branch ruleset for the public repositories.
+description: Actions runners and permissions, dependency updates, and the default-branch ruleset for the public repositories.
 sidebar_position: 6
 ---
 
-Use this page to configure GitHub Actions permissions, Dependabot and the default-branch ruleset on all five repositories. The ruleset is applied at the public-release flip.
+Use this page to configure GitHub Actions runners and permissions, Dependabot and the default-branch ruleset on all five repositories. The ruleset and the runner switch are applied at the public-release flip.
+
+## Runners
+
+Public repositories run every workflow on GitHub-hosted runners (`ubuntu-latest`). Hosted minutes are free for public repositories.
+
+While the repositories are private, workflows run on self-hosted `fantasy-runners`. These are actions-runner-controller scale sets on the home cluster, defined in the private `homelab-deployment` repository, and they're used only to save hosted minutes. The runners are ephemeral and use a ServiceAccount without permissions. However, their Docker-in-Docker sidecar is privileged, so a job running there effectively has root on the cluster node.
+
+:::danger[No self-hosted runners on a public repository]
+Keep every self-hosted runner off a public repository, even when only trusted events route to it:
+
+- **A fork PR chooses its own runner.** `pull_request` workflows run the YAML from the PR's merge commit, so a fork can set `runs-on: fantasy-runners` itself. Routing jobs in workflow files isn't a boundary.
+- **Anyone can trigger issue events.** Opening an issue on a public repository runs the `issues` workflows, and the fork PR approval setting doesn't cover them.
+- **Approval isn't enough.** After you approve a fork PR's workflows, its workflows, scripts and tests run exactly as written.
+
+To bring self-hosted runners back, enforce the policy on the runner itself, where a fork can't change it. For example, a job-started hook in the runner pod can reject fork PRs and issue events.
+:::
+
+No job needs access to the cluster. The infra workflows use `kubectl` only to render kustomize overlays offline, and publication goes to GHCR and Cloudflare Pages.
 
 ## Actions permissions
 
@@ -95,16 +113,28 @@ Don't require image publication or issue-event jobs on PRs. Infra's validation w
 To require them later, first replace workflow-level path filters with jobs that always report a result, and give duplicate job names unique names.
 :::
 
+### Switch runners at the flip
+
+Move to hosted runners as part of the flip, in this order:
+
+1. Merge each repository's "Run every workflow on GitHub-hosted runners" PR. These are draft PRs that refer to [#60](https://github.com/cvillarr23/fantasy-project/issues/60).
+2. Merge the `homelab-deployment` PR that removes the runner scale sets. Argo CD prunes them, and actions-runner-controller deregisters them from GitHub.
+3. Confirm that `gh api repos/cvillarr23/<repo>/actions/runners --jq .total_count` returns `0` for each repository.
+4. Then remove the rest of `apps/arc-runners` from `homelab-deployment`, uninstall the actions-runner-controller GitHub App from the five repositories, and delete its private key from OpenBao (`secret/arc/github-app`).
+
+Before the flip, check that `grep -rn fantasy-runners .github` is empty on each default branch. New workflows added since the switch PRs were opened must use `ubuntu-latest` too.
+
 ### Other settings at the flip
 
 - Enable vulnerability alerts, Dependabot security updates, secret scanning and push protection.
-- Require approval for workflows from **all outside collaborators**.
+- Under **Settings → Actions → General**, require approval for fork pull request workflows from **all external contributors**. GitHub only offers this setting on public repositories. Set it right after the flip, or with `gh api -X PUT repos/cvillarr23/<repo>/actions/permissions/fork-pr-contributor-approval -f approval_policy=all_external_contributors`.
 - Keep fork tokens read-only and secrets unavailable to fork PRs. Don't enable sending write tokens or secrets to fork workflows.
 - Keep the read-only default token, and disable Actions creating or approving pull request reviews.
+- If spam or abuse starts, use **Settings → Moderation → Interaction limits** to restrict issues, PRs and comments to collaborators for up to six months.
 
 ## Verify the ruleset
 
-1. Open a normal PR, a fork PR and a Dependabot PR.
+1. Open a normal PR, a fork PR and a Dependabot PR. The fork PR's workflows wait for approval and then run on GitHub-hosted runners.
 2. Confirm the linked-issue check passes for linked fork PRs, or gives a clear permission message.
 3. Confirm it fails clearly for unlinked PRs.
 4. Confirm branch deletion and force pushes are rejected.
