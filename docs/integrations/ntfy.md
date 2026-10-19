@@ -26,6 +26,33 @@ flowchart LR
 
 A deep-linked page scrolls to the matching card and outlines it. If the card isn't there (already handled, hidden or expired), the page shows its normal list.
 
+## How do I set up my phone?
+
+:::info[Prerequisites]
+- An Android phone with the ntfy app from Google Play or F-Droid.
+- The `phone` user's password, stored in OpenBao: `bao kv get -field=password secret/fantasy/ntfy-phone`.
+:::
+
+1. Open ntfy, then go to **Settings → Manage users → Add user**. Enter the service URL `https://ntfy.roo-net.cc`, the username `phone` and the password from OpenBao, then save.
+2. On the main screen, tap **+** to subscribe. Enter the topic `fantasy`.
+3. Check **Use another server** and enter `https://ntfy.roo-net.cc`.
+4. Check **Instant delivery**, then tap **Subscribe**. Without it, a self-hosted server only gets periodic polling on Android, so pushes can arrive many minutes late.
+5. When Android asks, allow notifications and let ntfy ignore battery optimization. Instant delivery holds one connection open in the background, and battery savers kill it.
+6. Optional: to let urgent pushes (an expired ESPN session) through Do Not Disturb, open the ntfy app's notification settings in Android and allow the highest-priority channel to override Do Not Disturb.
+
+**Verify:** the subscription shows recent messages, such as the "ntfy is set up" test push, since the server keeps 48 hours of history. To send a fresh test from the server:
+
+```bash
+kubectl exec deploy/ntfy -- ntfy publish --token "$(bao kv get -field=token secret/fantasy/ntfy)" \
+  --title "Test" https://ntfy.roo-net.cc/fantasy "Phone setup works."
+```
+
+| Problem | Fix |
+|---|---|
+| "Unauthorized" when subscribing | The user from step 1 is missing or its URL doesn't match the subscription's server exactly. |
+| Pushes arrive late or in bursts | Instant delivery is off, or battery optimization is stopping ntfy. Redo steps 4 and 5. |
+| Tapping a push shows a Cloudflare login | Expected the first time: `fantasy.roo-net.cc` sits behind Cloudflare Access. Sign in once in the phone's browser. |
+
 ## Why ntfy?
 
 | Option | Why not |
