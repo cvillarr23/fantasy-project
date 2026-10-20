@@ -29,6 +29,8 @@ flowchart LR
     llm -->|digest, trade notes| worker
     bao -->|External Secrets| core
     bao -->|External Secrets| worker
+    ntfy[ntfy]
+    worker -->|phone pushes| ntfy
 ```
 
 ## What does each integration do?
@@ -41,6 +43,7 @@ flowchart LR
 | LLM providers | Chat, rumor digest, trade notes | API keys (Groq, Gemini). None for Ollama. | Per request, plus daily digest | [LLM providers](./llm-providers.md) |
 | RotoWire and Reddit | News and chatter for rumor signals | None (RSS), app-only OAuth (Reddit) | Every 30 min | [Rumor feeds](./rumor-feeds.md) |
 | OpenBao | Stores and delivers every credential above | Kubernetes auth, through External Secrets | Hourly sync | [OpenBao](./openbao.md) |
+| ntfy | Phone pushes for failures and trades that need you | Write-only access token | On each event | [ntfy phone notifications](./ntfy.md) |
 
 RabbitMQ is also external to each service but internal to the system. See the [queue contract explorer](/reference/queues).
 
@@ -50,6 +53,7 @@ RabbitMQ is also external to each service but internal to the system. See the [q
 |---|---|---|
 | ESPN | Reads and writes fail | Retries a short, fixed time for expired sessions. Refuses to guess when an outcome is unclear. |
 | Sleeper | No new injury or projection data | Keeps the last stored values. The next run catches up. |
+| ntfy | Phone pushes don't arrive | Logs a warning and carries on. Bots never fail because of it. |
 | nflverse | Metrics for the week are missing | Writes nothing partial. A rerun fills the week. |
 | LLM | Chat or digest text is unavailable | Falls through the provider chain. Scoring and decisions don't depend on it. |
 | Rumor feeds | Fewer rumor signals | Skips the source for that run. |
