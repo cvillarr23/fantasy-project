@@ -37,7 +37,7 @@ flowchart LR
 | Core API | `fantasy-core-pipeline` | FastAPI control plane. It reads data for the UI, scores trades, records actions and publishes them to RabbitMQ. See the [API reference](/core/api-reference). |
 | Ingestion and solvers | `fantasy-core-pipeline` | Python modules run by CronJobs. They sync players, projections and scores, compute VORP, and pick lineups and waiver claims. See [Decision pipelines](/core/decision-pipelines). |
 | Browser worker | `fantasy-browser-worker` | Node.js bots that act on ESPN through its REST API, a Playwright browser or the draft-room WebSocket. See [Browser worker](/worker/). |
-| LLM chain | `fantasy-browser-worker` | Groq, then Gemini, then a self-hosted Ollama. The chain drafts trade packages, pitches and rumor digests. LLM output never reaches ESPN without human approval. |
+| LLM chain | `fantasy-browser-worker` | Groq, then Gemini, then a self-hosted Ollama. The chain writes trade pitches and rumor digests, and drafts trade packages only when the scored candidate set is unavailable. LLM output never reaches ESPN without human approval. |
 | Infrastructure | `fantasy-infra` | Kustomize manifests for every service, store, CronJob, dashboard and alert. |
 
 ## Where is state kept?
@@ -87,6 +87,7 @@ Every CronJob uses `America/Chicago` time except the session check, which uses U
 | `fantasy-draft-prep-refresher` | Daily 18:00 | `sync_projections`, `sync_kicker_dst`, `vorp_matrix` | Upcoming-week projections and VORP |
 | `fantasy-lineup-optimizer` | Tue 19:15 | `lineup_solver` | [Lineup flow](./flows/lineup.md) |
 | `fantasy-weekly-waiver-trigger` | Tue 20:30 | `waiver_evaluator` | [Waiver flow](./flows/waivers.md) |
+| `fantasy-trade-candidates`, `fantasy-trade-candidates-prescan` | Daily 07:00; Wed and Fri 12:30, before the scan | `trade_candidates` | League-wide scored trade candidates for the scan and the trade finder |
 | `fantasy-rumor-syncer` | Every 30 min | `sync_rumors` | Rumor signals |
 | `fantasy-rumor-action-trigger` | Daily 21:45 | `rumor_action_service` | Rumor-driven lineup and waiver triggers |
 | `fantasy-rapid-status-syncer` | Every 10 min, Thu, Sun and Mon | `sync_players` | Injury statuses and `waiver_actions` alerts |
