@@ -4,7 +4,7 @@ description: How a trade scan stages a proposal, and how a human approval turns 
 sidebar_position: 4
 ---
 
-Twice a week the trade scan looks for a team that is weak where we are strong. An LLM suggests packages, and core scores each one. The worker stages the best package as an unsent offer, and nothing goes to the other manager until you approve that exact offer.
+Every day, the core `trade_candidates` job enumerates and scores every 1-for-1, 2-for-1 and 1-for-2 trade across the league. It runs again just before each scan. Twice a week the trade scan takes the best proposable candidates, up to three per team, re-scores each one live, and stages the best as unsent offers. When the candidate set is missing, empty, malformed or more than 36 hours old, the scan falls back to asking an LLM for packages. In both cases the LLM writes the pitch from score evidence, and nothing goes to the other manager until you approve that exact offer. The Trades page browses the same candidate set in its trade finder.
 
 ```mermaid
 sequenceDiagram
@@ -19,8 +19,11 @@ sequenceDiagram
     CJ->>W: trade_scan.js --stage
     W->>DB: claim today's scan (trade_scan_claim)
     W->>API: GET /v1/trade/context
-    W->>L: up to 6 candidate packages
-    W->>API: POST /v1/trade/score (each package)
+    W->>API: GET /v1/trade/candidates?status=proposable
+    opt candidates missing, empty or stale
+        W->>L: up to 6 candidate packages
+    end
+    W->>API: POST /v1/trade/score (live re-score, each package)
     W->>W: keep useful packages, rank
     W->>L: pitch from score evidence
     W->>E: fill Propose Trade form, no send
