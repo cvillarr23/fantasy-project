@@ -127,7 +127,7 @@ A config change, such as flipping `AUTO_PUBLISH_IR_MOVES`, is a reviewed PR to `
 | Signal | Where | Use it to |
 |---|---|---|
 | Traces | OpenTelemetry to Tempo. Queue messages carry a `traceparent`, so a worker span joins the API's trace. | Follow one action across core and the worker. |
-| Logs | Loki. Worker lines carry `trackingId` and `traceId`. | Read a bot run. See [Telemetry](/worker/telemetry). |
+| Logs | Loki. Worker lines carry `trackingId` and `trace_id`. | Read a bot run. See [Telemetry](/worker/telemetry). |
 | Dashboards | Grafana, provisioned from `fantasy-infra` ConfigMaps: bot decisions, execution log, draft pipeline, CronJob health, traces | Watch the system at a glance. |
 | Alerts | Grafana alert rules for failed or missed CronJobs and rumor-action outcomes | Get told when a schedule breaks. See [CronJob alerts](/infra/cronjob-alerts). |
 | Activity | `GET /v1/activity/actions` and the UI's Activity page | Check whether an action was delivered and verified. See [Activity submissions](/core/activity-api). |
