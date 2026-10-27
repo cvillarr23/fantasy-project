@@ -4,13 +4,11 @@ description: Actions runners and permissions, dependency updates, and the defaul
 sidebar_position: 6
 ---
 
-Use this page to configure GitHub Actions runners and permissions, Dependabot and the default-branch ruleset on all five repositories. The ruleset and the runner switch are applied at the public-release flip.
+This page documents the GitHub Actions runners and permissions, Dependabot and the default-branch ruleset currently in force on all five public repositories.
 
 ## Runners
 
-Public repositories run every workflow on GitHub-hosted runners (`ubuntu-latest`). Hosted minutes are free for public repositories.
-
-While the repositories are private, workflows run on self-hosted `fantasy-runners`. These are actions-runner-controller scale sets on the home cluster, defined in the private `homelab-deployment` repository, and they're used only to save hosted minutes. The runners are ephemeral and use a ServiceAccount without permissions. However, their Docker-in-Docker sidecar is privileged, so a job running there effectively has root on the cluster node.
+Every workflow runs on GitHub-hosted runners (`ubuntu-latest`). The `fantasy-*` actions-runner-controller scale sets have been removed. Actions Runner Controller remains on the cluster only for the private `homelab-provisioners` repository.
 
 :::danger[No self-hosted runners on a public repository]
 Keep every self-hosted runner off a public repository, even when only trusted events route to it:
@@ -26,11 +24,7 @@ No job needs access to the cluster. The infra workflows use `kubectl` only to re
 
 ## Actions permissions
 
-Set all five repositories to a read-only default `GITHUB_TOKEN`, with approval of pull request reviews disabled.
-
-:::warning[Order matters for core-pipeline]
-Merge core-pipeline's explicit workflow permissions before changing its repository default from write to read.
-:::
+All five repositories use a read-only default `GITHUB_TOKEN`, and Actions is disabled from creating or approving pull request reviews.
 
 Workflows declare their permissions explicitly:
 
@@ -67,23 +61,19 @@ Each ecosystem targets the repository root.
 Infra has no dependency manifest or Dockerfile. Dependabot's Docker ecosystem covers Dockerfiles, not Kubernetes manifests, so review Kubernetes image versions separately. Python packages installed directly by infra's workflow steps also need separate review.
 :::
 
-### Retired deploy keys
+### Deploy-key status
 
-Image publication no longer needs cross-repository SSH credentials.
+Image publication no longer needs cross-repository SSH credentials. The only deploy key on any of the five repositories is `argocd image updater` on infra. Argo CD Image Updater uses it to commit image digests directly to infra's default branch.
 
-| Action | Where | Secret or key |
+| Status | Where | Secret or key |
 |---|---|---|
-| Remove | core-pipeline, browser-worker, web-ui | `INFRA_DEPLOY_KEY` |
-| Remove | infra | `CI cross-repo deploy key (image-tag bumps)` |
+| Removed | core-pipeline, browser-worker, web-ui | `INFRA_DEPLOY_KEY` |
+| Removed | infra | `CI cross-repo deploy key (image-tag bumps)` |
 | Keep | infra | `argocd image updater`, which Argo CD Image Updater uses for git write-back |
 
-## Apply at the public-release flip
+## Default-branch ruleset
 
-Create an active branch ruleset named `default-branch` in each repository. Target **the default branch** rather than a hard-coded branch name.
-
-:::info[Free plan]
-The private repositories on the free plan can't enforce this ruleset yet.
-:::
+An active branch ruleset named `default-branch` is enabled on all five repositories. It targets **the default branch** rather than a hard-coded branch name.
 
 ### Ruleset rules
 
@@ -93,11 +83,11 @@ The private repositories on the free plan can't enforce this ruleset yet.
 | Conversation resolution | Required. |
 | Status checks | Required, with the branch up to date before merging. Use the GitHub Actions app as the expected source of each check. |
 | Force pushes and branch deletion | Blocked. |
-| Bypass list | Empty. Any emergency bypass needs an explicit, recorded settings change. |
+| Bypass list | Empty on four repositories. Infra allows deploy keys to bypass at all times so Argo CD Image Updater can write image digests directly to the default branch. Any new write-enabled deploy key on infra can also bypass; it must be treated as a privileged credential. |
 
 ### Required checks
 
-Use these existing job names. Confirm their exact names from a successful PR run when you apply the ruleset.
+These existing job names are required checks:
 
 | Repository | Required checks |
 |---|---|
@@ -113,23 +103,14 @@ Don't require image publication or issue-event jobs on PRs. Infra's validation w
 To require them later, first replace workflow-level path filters with jobs that always report a result, and give duplicate job names unique names.
 :::
 
-### Switch runners at the flip
+## Other repository settings
 
-Move to hosted runners as part of the flip, in this order:
-
-1. Merge each repository's "Run every workflow on GitHub-hosted runners" PR. These are draft PRs that refer to [#60](https://github.com/cvillarr23/fantasy-project/issues/60).
-2. Merge the `homelab-deployment` PR that removes the runner scale sets. Argo CD prunes them, and actions-runner-controller deregisters them from GitHub.
-3. Confirm that `gh api repos/cvillarr23/<repo>/actions/runners --jq .total_count` returns `0` for each repository.
-4. Then remove the rest of `apps/arc-runners` from `homelab-deployment`, uninstall the actions-runner-controller GitHub App from the five repositories, and delete its private key from OpenBao (`secret/arc/github-app`).
-
-Before the flip, check that `grep -rn fantasy-runners .github` is empty on each default branch. New workflows added since the switch PRs were opened must use `ubuntu-latest` too.
-
-### Other settings at the flip
-
-- Enable vulnerability alerts, Dependabot security updates, secret scanning and push protection.
-- Under **Settings → Actions → General**, require approval for fork pull request workflows from **all external contributors**. GitHub only offers this setting on public repositories. Set it right after the flip, or with `gh api -X PUT repos/cvillarr23/<repo>/actions/permissions/fork-pr-contributor-approval -f approval_policy=all_external_contributors`.
+- Workflows on fork pull requests from **all external contributors** wait for maintainer approval before they run.
+- Vulnerability alerts, Dependabot security updates, secret scanning and push protection are enabled.
+- Private vulnerability reporting is enabled. Each repository's `SECURITY.md` points reporters to it.
+- CodeQL code scanning uses GitHub's default setup. Its `Analyze` jobs report on PRs but aren't required checks.
+- Branches are deleted automatically when their pull request merges.
 - Keep fork tokens read-only and secrets unavailable to fork PRs. Don't enable sending write tokens or secrets to fork workflows.
-- Keep the read-only default token, and disable Actions creating or approving pull request reviews.
 - If spam or abuse starts, use **Settings → Moderation → Interaction limits** to restrict issues, PRs and comments to collaborators for up to six months.
 
 ## Verify the ruleset
