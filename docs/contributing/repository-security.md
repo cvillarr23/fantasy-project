@@ -83,7 +83,7 @@ An active branch ruleset named `default-branch` is enabled on all five repositor
 | Conversation resolution | Required. |
 | Status checks | Required, with the branch up to date before merging. Use the GitHub Actions app as the expected source of each check. |
 | Force pushes and branch deletion | Blocked. |
-| Bypass list | Empty on four repositories. Infra allows deploy keys to bypass at all times so Argo CD Image Updater can write image digests directly to the default branch. Any new write-enabled deploy key on infra can also bypass; it must be treated as a privileged credential. |
+| Bypass list | **Repository admins, pull requests only**, on all five repositories. An admin can merge a PR without approvals, passing checks or an up-to-date branch (`gh pr merge --admin`), but still can't push directly, force-push or delete the default branch. Infra also allows deploy keys to bypass at all times so Argo CD Image Updater can write image digests directly to the default branch. Any new write-enabled deploy key on infra can also bypass; it must be treated as a privileged credential. |
 
 ### Required checks
 
