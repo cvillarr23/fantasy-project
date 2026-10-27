@@ -34,14 +34,14 @@ flowchart LR
 
 | Job | What it does |
 |---|---|
-| `build` | Checks out each source repo's `docs/` at its default branch using `DOCS_REPOS_READ_TOKEN`. Builds the web UI's Storybook component library in its checkout on Node 22. Runs `npm ci` and `npm run build`, which copies the library to `/ui/components/`, then uploads `build/` as an artifact. It has no deployment credentials and is the required check. |
+| `build` | Checks out each public source repo's `docs/` at its default branch. Builds the web UI's Storybook component library in its checkout on Node 22. Runs `npm ci` and `npm run build`, which copies the library to `/ui/components/`, then uploads `build/` as an artifact. It has no deployment credentials and is the required check. |
 | `deploy` | Downloads the artifact and runs `wrangler pages deploy`, using the `wrangler` version pinned in `package.json`. |
 
 | Trigger | Result |
 |---|---|
 | Push to `main`, a `docs-updated` repository dispatch, the nightly build or a manual run on `main` | Deploys to production. |
 | PR from a branch in this repository | Deploys a preview for that branch. The job posts the deployment URL and branch alias on the PR and updates that comment on each push. |
-| Fork or Dependabot PR | Builds only the site pages and local section placeholders. It doesn't check out private docs or deploy. The full cross-repo link check runs on trusted branches and `main`. |
+| Fork or Dependabot PR | Runs the full cross-repo docs build. It doesn't deploy. |
 
 ### Deploy secrets
 
@@ -78,21 +78,20 @@ These credentials are separate from the Cloudflare deploy token and the build's 
 
 | Secret | Stored in | Fine-grained PAT access |
 |---|---|---|
-| `DOCS_REPOS_READ_TOKEN` | fantasy-project | Contents: read, limited to core-pipeline, browser-worker, web-ui and infra |
 | `DOCS_SITE_DISPATCH_TOKEN` | Each of the four source repos | Contents: write, limited to fantasy-project only |
 
-### Create and store the tokens
+### Create and store the dispatch token
 
 1. Open **GitHub Settings → Developer settings → Personal access tokens → Fine-grained tokens**.
-2. Create two fine-grained PATs. Select resource owner `cvillarr23`, only the repositories and permissions in the table, and an expiration date.
-3. Store each token with `gh secret set <name> --repo cvillarr23/<repo>` and paste it at the hidden prompt. Use the same dispatch token in all four source repos.
-4. Renew the tokens and replace the secrets before they expire.
+2. Create a fine-grained PAT. Select resource owner `cvillarr23`, only the repositories and permissions in the table, and an expiration date.
+3. Store the token with `gh secret set DOCS_SITE_DISPATCH_TOKEN --repo cvillarr23/<repo>` and paste it at the hidden prompt. Use the same dispatch token in all four source repos.
+4. Renew the token and replace the secrets before it expires.
 
 :::warning[Use dedicated tokens]
 Never reuse the broader CLI login token for these automations. The dispatch endpoint requires Contents: write, and the source workflows have no permissions on their own `GITHUB_TOKEN`.
 :::
 
-The checkout actions don't persist the read credential in git configuration.
+The checkout actions don't persist their credentials in git configuration.
 
 ### How the notification works
 
@@ -118,7 +117,7 @@ The site rebuilds nightly at **08:17 UTC** even without a notification. To rebui
 gh workflow run docs-build.yml --repo cvillarr23/fantasy-project --ref main
 ```
 
-Trusted builds fail if the read secret, any source checkout or the web UI component library build is missing. A local checkout without a sibling repo shows a placeholder for that section. Without `fantasy-web-ui/storybook-static`, `/ui/components/` shows a placeholder; run `npm run build-storybook` in the web-ui checkout to include it.
+The build fails if any source checkout or the web UI component library build is missing. A local checkout without a sibling repo shows a placeholder for that section. Without `fantasy-web-ui/storybook-static`, `/ui/components/` shows a placeholder; run `npm run build-storybook` in the web-ui checkout to include it.
 
 To validate all four sections locally, clone or update the sibling repos and run:
 

@@ -21,87 +21,47 @@ jobs:
         with:
           # Full history so "last updated" dates come from each page's last commit.
           fetch-depth: 0
-      - name: Require the source-repo read credential
-        if: >-
-          github.event_name != 'pull_request' ||
-          (github.event.pull_request.head.repo.full_name == github.repository &&
-           github.actor != 'dependabot[bot]')
-        env:
-          DOCS_REPOS_READ_TOKEN: ${{ secrets.DOCS_REPOS_READ_TOKEN }}
-        run: |
-          if [ -z "$DOCS_REPOS_READ_TOKEN" ]; then
-            echo "::error::Set DOCS_REPOS_READ_TOKEN with Contents: read for the four source repos."
-            exit 1
-          fi
       - name: Checkout fantasy-core-pipeline docs
-        if: >-
-          github.event_name != 'pull_request' ||
-          (github.event.pull_request.head.repo.full_name == github.repository &&
-           github.actor != 'dependabot[bot]')
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: cvillarr23/fantasy-core-pipeline
           ref: main
           path: .repo-docs/fantasy-core-pipeline
-          token: ${{ secrets.DOCS_REPOS_READ_TOKEN }}
           persist-credentials: false
           fetch-depth: 0
       - name: Checkout fantasy-browser-worker docs
-        if: >-
-          github.event_name != 'pull_request' ||
-          (github.event.pull_request.head.repo.full_name == github.repository &&
-           github.actor != 'dependabot[bot]')
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: cvillarr23/fantasy-browser-worker
           ref: main
           path: .repo-docs/fantasy-browser-worker
-          token: ${{ secrets.DOCS_REPOS_READ_TOKEN }}
           persist-credentials: false
           fetch-depth: 0
       - name: Checkout fantasy-web-ui docs
-        if: >-
-          github.event_name != 'pull_request' ||
-          (github.event.pull_request.head.repo.full_name == github.repository &&
-           github.actor != 'dependabot[bot]')
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: cvillarr23/fantasy-web-ui
           ref: master
           path: .repo-docs/fantasy-web-ui
-          token: ${{ secrets.DOCS_REPOS_READ_TOKEN }}
           persist-credentials: false
           fetch-depth: 0
       - name: Checkout fantasy-infra docs
-        if: >-
-          github.event_name != 'pull_request' ||
-          (github.event.pull_request.head.repo.full_name == github.repository &&
-           github.actor != 'dependabot[bot]')
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: cvillarr23/fantasy-infra
           ref: main
           path: .repo-docs/fantasy-infra
-          token: ${{ secrets.DOCS_REPOS_READ_TOKEN }}
           persist-credentials: false
           fetch-depth: 0
       # The component library is published at /ui/components/ (scripts/add-ui-components.mjs).
       # web-ui's CI runs on Node 22, so build it with that before switching to the site's Node.
       - name: Set up Node for the web-ui component library
-        if: >-
-          github.event_name != 'pull_request' ||
-          (github.event.pull_request.head.repo.full_name == github.repository &&
-           github.actor != 'dependabot[bot]')
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: '22'
           cache: npm
           cache-dependency-path: .repo-docs/fantasy-web-ui/package-lock.json
       - name: Build the web-ui component library
-        if: >-
-          github.event_name != 'pull_request' ||
-          (github.event.pull_request.head.repo.full_name == github.repository &&
-           github.actor != 'dependabot[bot]')
         # Build outside this repository: nested here, Vite's tsconfig lookup reaches the site's
         # tsconfig.json, which extends a package that isn't installed yet, and the build fails.
         run: |
@@ -119,9 +79,7 @@ jobs:
       - run: npm run build
         env:
           FANTASY_DOCS_ROOT: ${{ github.workspace }}/.repo-docs
-          # Fork and Dependabot builds validate the site and local placeholders.
-          FANTASY_DOCS_SITE_ONLY: ${{ github.event_name == 'pull_request' && (github.event.pull_request.head.repo.full_name != github.repository || github.actor == 'dependabot[bot]') }}
-          FANTASY_DOCS_REQUIRED: ${{ github.event_name != 'pull_request' || (github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]') }}
+          FANTASY_DOCS_REQUIRED: 'true'
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: site
@@ -130,7 +88,7 @@ jobs:
 
   deploy:
     needs: build
-    # Fork and Dependabot PRs don't get Actions secrets, so they build without deploying.
+    # Deploy credentials are unavailable to fork and Dependabot PRs.
     if: >-
       github.event_name == 'push' ||
       github.event_name == 'repository_dispatch' ||
