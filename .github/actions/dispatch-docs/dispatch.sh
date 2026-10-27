@@ -6,8 +6,8 @@ if [ -z "${GH_TOKEN:-}" ]; then
   exit 1
 fi
 
-# curl rather than the gh CLI: the self-hosted runner image (actions-runner) ships
-# curl but not gh. The token goes in through a config on stdin so it never shows
+# curl rather than the gh CLI, so the action works on runner images that ship
+# curl but not gh, such as actions-runner. The token goes in through a config on stdin so it never shows
 # up in the process's arguments.
 printf 'header = "Authorization: Bearer %s"\n' "$GH_TOKEN" |
   curl --config - --fail-with-body --silent --show-error \
