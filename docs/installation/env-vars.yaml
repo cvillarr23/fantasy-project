@@ -1,0 +1,1011 @@
+# Every environment variable the fantasy-* services read, rendered on
+# /installation/configuration. scripts/env-reference.mjs checks this file against the code
+# on every full site build and fails the build when they disagree, so add an entry in the
+# same change that adds a variable.
+#
+# Fields:
+#   name         the variable. With `pattern: true`, {PLACEHOLDER} matches any uppercase word.
+#   repos        which code reads it: core, worker, ui. `platform` means only fantasy-infra
+#                sets it, for a third-party image or library.
+#   default      what applies when it is unset; null when nothing does.
+#   required     yes, no, or the condition that makes it required.
+#   secret       true when the value is a credential. Never put a real value in this file.
+#   description  one or two sentences.
+#   docs         optional site route with more detail.
+
+variables:
+  # Connections
+  - name: DB_HOST
+    repos: [core, worker]
+    default: "core: fantasy-db.default.svc.cluster.local; worker: none (node-postgres falls back to PGHOST or localhost)"
+    required: yes, outside the cluster
+    secret: false
+    description: Postgres host.
+  - name: DB_NAME
+    repos: [core, worker]
+    default: "core: fantasy_football; worker: none"
+    required: yes, outside the cluster
+    secret: false
+    description: Postgres database name.
+  - name: DB_USER
+    repos: [core, worker]
+    default: "core: bot_admin; worker: none"
+    required: yes, outside the cluster
+    secret: false
+    description: Postgres user.
+  - name: DB_PASSWORD
+    repos: [core, worker]
+    default: null
+    required: "yes"
+    secret: true
+    description: Postgres password. Core logs an error and every query fails without it.
+  - name: REDIS_HOST
+    repos: [core, worker]
+    default: fantasy-cache.default.svc.cluster.local
+    required: yes, outside the cluster
+    secret: false
+    description: Redis host for daily locks, the draft feed and notification de-duplication.
+  - name: REDIS_PORT
+    repos: [core, worker]
+    default: "6379"
+    required: "no"
+    secret: false
+    description: Redis port.
+  - name: AMQP_URL
+    repos: [core, worker]
+    default: "amqp://guest:guest@fantasy-broker.databases.svc.cluster.local:5672/%2f (the worker's default ends in // instead)"
+    required: yes, outside the cluster
+    secret: true
+    description: RabbitMQ connection URL, including the credentials. Encode the default vhost as %2f.
+    docs: /reference/queues
+  - name: CORE_PIPELINE_URL
+    repos: [worker]
+    default: http://fantasy-core-pipeline.default.svc.cluster.local:8000
+    required: yes, outside the cluster, for the trade bots
+    secret: false
+    description: Base URL the worker uses to call the core API for trade scoring, context and candidates.
+  - name: CORE_API_BASE_URL
+    repos: [core]
+    default: "http://fantasy-core-pipeline.core.svc.cluster.local:8000 (trigger client) or http://fantasy-api.core.svc.cluster.local:8000 (stale draft sweeper)"
+    required: "yes, for jobs that call the API: the defaults name a namespace the manifests don't use"
+    secret: false
+    description: Base URL core's jobs use to call the core API's trigger endpoints.
+  - name: CORE_API_UPSTREAM
+    repos: [ui]
+    default: "fantasy-core-pipeline.default.svc.cluster.local:8000 (set in the image)"
+    required: yes, outside the cluster
+    secret: false
+    description: host:port that the UI container's nginx proxies /v1/ to.
+  - name: VITE_API_PROXY_TARGET
+    repos: [ui]
+    default: http://localhost:8000
+    required: "no"
+    secret: false
+    description: Core API URL the Vite dev server proxies /v1 to. Set it in the shell, not in .env.local.
+    docs: /ui/developer/running-locally
+  - name: TRIGGER_API_KEY
+    repos: [core, ui]
+    default: null
+    required: yes, for every trigger and job write
+    secret: true
+    description: >-
+      Shared key for the API's write endpoints. The API returns 500 on those routes without it;
+      core's jobs send it, and the UI's nginx (or the Vite dev proxy) adds it as X-API-Key. Never
+      expose it as a VITE_ variable.
+    docs: /ui/auth
+
+  # ESPN league and session
+  - name: ESPN_LEAGUE_ID
+    repos: [core, worker]
+    default: null
+    required: "yes"
+    secret: true
+    description: Your ESPN league ID. Production keeps it in OpenBao with the session cookies.
+    docs: /installation/configuration#league-team-and-season
+  - name: ESPN_TEAM_ID
+    repos: [core, worker]
+    default: null
+    required: "yes"
+    secret: true
+    description: Your team's ID within the league.
+    docs: /installation/configuration#league-team-and-season
+  - name: CURRENT_YEAR
+    repos: [core, worker]
+    default: "core: the current calendar year; worker: 2026"
+    required: yes, for the first refresh (draft_prep_refresh exits without it)
+    secret: false
+    description: The ESPN season ID, such as 2026.
+    docs: /installation/configuration#league-team-and-season
+  - name: ESPN_S2
+    repos: [core, worker]
+    default: "null (the worker falls back to OpenBao)"
+    required: "yes"
+    secret: true
+    description: The espn_s2 session cookie from a logged-in browser.
+    docs: /worker/espn/session-and-auth
+  - name: ESPN_SWID
+    repos: [core]
+    default: null
+    required: yes, for ESPN reads
+    secret: true
+    description: The SWID cookie, under the name core reads. The worker reads the same value as SWID.
+    docs: /worker/espn/session-and-auth
+  - name: SWID
+    repos: [worker]
+    default: "null (falls back to OpenBao)"
+    required: "yes"
+    secret: true
+    description: The SWID cookie, under the name the worker reads. Core reads the same value as ESPN_SWID.
+    docs: /worker/espn/session-and-auth
+  - name: ESPN_SESSION_STATE_FILE
+    repos: [worker]
+    default: "null (falls back to OpenBao)"
+    required: yes, for the draft room, trade builder and other rendered pages
+    secret: true
+    description: Path to a saved Playwright storage state (cookies plus the Disney login's localStorage).
+    docs: /worker/espn/session-and-auth
+  - name: OPENBAO_ESPN_SECRET_PATH
+    repos: [worker]
+    default: secret/fantasy/espn
+    required: "no"
+    secret: false
+    description: OpenBao path the worker reads espn_s2 and swid from when the cookie variables are unset.
+    docs: /integrations/openbao
+  - name: OPENBAO_ESPN_SESSION_STATE_PATH
+    repos: [worker]
+    default: secret/fantasy/espn-session-state
+    required: "no"
+    secret: false
+    description: OpenBao path for the saved browser session, read by the bots and written by the remote login Job.
+    docs: /integrations/openbao
+  - name: OPENBAO_K8S_ROLE
+    repos: [worker]
+    default: fantasy-browser-worker
+    required: "no"
+    secret: false
+    description: OpenBao Kubernetes auth role the remote login Job uses to save the session.
+  - name: CDP_DEBUG_PORT
+    repos: [worker]
+    default: null
+    required: "no"
+    secret: false
+    description: Opens a Chrome DevTools port on the bot's browser for live debugging.
+  - name: NODE_ENV
+    repos: [worker]
+    default: null
+    required: "no"
+    secret: false
+    description: When production, the bots block images, CSS and fonts to speed up page loads.
+  - name: FORCE_MANUAL_LOGIN
+    repos: [worker]
+    default: null
+    required: "no"
+    secret: false
+    description: Makes the recon tools ignore the saved session and prompt for a fresh login.
+    docs: /worker/espn/recon-tools
+  - name: TRADE_RECON_TO_TEAM_ID
+    repos: [worker]
+    default: null
+    required: yes, for trade_recon
+    secret: false
+    description: Opposing team the trade recon tool opens a trade with.
+  - name: LOGIN_WAIT_TIMEOUT_MS
+    repos: [worker]
+    default: "1800000"
+    required: "no"
+    secret: false
+    description: How long the remote login Job waits for you to log in over VNC.
+  - name: LOGIN_POLL_INTERVAL_MS
+    repos: [worker]
+    default: "5000"
+    required: "no"
+    secret: false
+    description: How often the remote login Job checks for a completed login.
+  - name: VNC_DISPLAY
+    repos: [worker]
+    default: ":99"
+    required: "no"
+    secret: false
+    description: X display the remote login image starts Xvfb on.
+  - name: VNC_RESOLUTION
+    repos: [worker]
+    default: 1280x800x24
+    required: "no"
+    secret: false
+    description: Virtual screen size for the remote login browser.
+  - name: VNC_PORT
+    repos: [worker]
+    default: "5900"
+    required: "no"
+    secret: false
+    description: x11vnc port in the remote login image.
+  - name: NOVNC_PORT
+    repos: [worker]
+    default: "6080"
+    required: "no"
+    secret: false
+    description: noVNC web client port in the remote login image.
+  - name: VNC_PASSWORD
+    repos: [worker]
+    default: "null (no password)"
+    required: "no"
+    secret: true
+    description: Password for the remote login VNC session. Without it, only a port-forward protects the session.
+
+  # Write safety
+  - name: DRY_RUN
+    repos: [worker]
+    default: "per bot: lineup is live, every other bot dry-runs"
+    required: "no"
+    secret: false
+    description: >-
+      Only 0, false or no make a bot write to ESPN; any other non-blank value forces a dry run.
+      Set DRY_RUN=true while you evaluate the stack, because the lineup bot is live by default.
+    docs: /overview/safety-model
+  - name: TRADE_DRY_RUN
+    repos: [worker]
+    default: falls back to DRY_RUN
+    required: "no"
+    secret: false
+    description: Dry-run switch for trade submissions only, parsed like DRY_RUN. It lets trades go live without arming every other bot.
+    docs: /overview/safety-model
+  - name: TRADE_SUBMIT_ENABLED
+    repos: [worker]
+    default: "off"
+    required: "no"
+    secret: false
+    description: Arms outgoing trade submissions (1, true or yes). An approval and verified selectors are still required.
+    docs: /overview/safety-model
+  - name: TRADE_RESPONSE_ENABLED
+    repos: [worker]
+    default: "off"
+    required: "no"
+    secret: false
+    description: Arms accept, decline and counter responses to incoming trades (1, true or yes).
+    docs: /overview/safety-model
+  - name: AUTO_PUBLISH_IR_MOVES
+    repos: [core]
+    default: "off"
+    required: "no"
+    secret: false
+    description: Lets the waiver evaluator publish IR stash moves without a human (1, true or yes).
+    docs: /infra/auto-publish-ir-moves
+
+  # Worker runtime
+  - name: IDLE_EXIT_SECONDS
+    repos: [worker]
+    default: "0 (never exit)"
+    required: "no"
+    secret: false
+    description: The worker exits after this many idle seconds, so a KEDA-scaled pod frees its slot. Production uses 120.
+  - name: DEBUG_CAPTURE
+    repos: [worker]
+    default: "on"
+    required: "no"
+    secret: false
+    description: Set to 0, false or no to stop saving page snapshots and the ESPN write log.
+    docs: /worker/espn/recon-tools
+  - name: DEBUG_OUTPUT_DIR
+    repos: [worker]
+    default: <repo>/recon-output
+    required: "no"
+    secret: false
+    description: Where debug captures and recon output are written.
+  - name: POD_NAME
+    repos: [worker]
+    default: falls back to HOSTNAME
+    required: "no"
+    secret: false
+    description: Identifies the pod in the draft session registry.
+
+  # Logging and tracing
+  - name: LOG_LEVEL
+    repos: [worker]
+    default: info
+    required: "no"
+    secret: false
+    description: pino log level.
+    docs: /worker/telemetry
+  - name: OTEL_EXPORTER_OTLP_ENDPOINT
+    repos: [core, worker]
+    default: null
+    required: "no"
+    secret: false
+    description: >-
+      OTLP endpoint for traces; tracing is off when unset. Core takes a bare http://host:4318 and
+      appends /v1/traces; the worker exports over gRPC to an http:// URL.
+  - name: OTEL_SERVICE_NAME
+    repos: [worker]
+    default: fantasy-browser-worker
+    required: "no"
+    secret: false
+    description: Service name on worker traces. Production sets a name per workload for core as well.
+  - name: OTEL_CONSOLE_EXPORT
+    repos: [core]
+    default: null
+    required: "no"
+    secret: false
+    description: Set to 1 to print core's spans to the console.
+  - name: WORKER_OTEL_EXPORTER_OTLP_ENDPOINT
+    repos: [core]
+    default: null
+    required: "no"
+    secret: false
+    description: OTLP endpoint the job launcher passes to the worker pods it starts.
+  - name: OTEL_EXPORTER_OTLP_PROTOCOL
+    repos: [platform]
+    default: SDK default
+    required: "no"
+    secret: false
+    description: Read by the OpenTelemetry SDKs; production sets http/protobuf for core and grpc for the worker.
+
+  # Run identity (set by the job launcher or the CronJobs; don't set by hand)
+  - name: RUN_ID
+    repos: [core, worker]
+    default: null
+    required: "no"
+    secret: false
+    description: Run log row the job adopts, so a launched run and its log entry match.
+  - name: RUN_ATTEMPT
+    repos: [core]
+    default: null
+    required: "no"
+    secret: false
+    description: Attempt number of a launcher run.
+  - name: RUN_TRIGGER
+    repos: [core, worker]
+    default: null
+    required: "no"
+    secret: false
+    description: What started the run, such as schedule, manual or downstream.
+  - name: RUN_PARENT_ID
+    repos: [core, worker]
+    default: null
+    required: "no"
+    secret: false
+    description: Parent run, for chained jobs.
+  - name: RUN_CRONJOB
+    repos: [core, worker]
+    default: null
+    required: "no"
+    secret: false
+    description: Name of the CronJob that started the run.
+  - name: RUN_K8S_JOB
+    repos: [core, worker]
+    default: falls back to HOSTNAME
+    required: "no"
+    secret: false
+    description: Name of the Kubernetes Job that started the run.
+  - name: JOB_NAME
+    repos: [core]
+    default: null
+    required: "no"
+    secret: false
+    description: Scopes idempotency keys for the lineup optimizer and rumor action jobs.
+
+  # Core: jobs, launcher and Kubernetes
+  - name: JOB_CATALOG_PATH
+    repos: [core]
+    default: /etc/fantasy-job-catalog/catalog.yaml
+    required: "no"
+    secret: false
+    description: Job catalog the launcher schedules and the /v1/jobs API reads.
+  - name: "{PROFILE}_IMAGE"
+    pattern: true
+    examples: [CORE_IMAGE, WORKER_IMAGE]
+    repos: [core]
+    default: null
+    required: yes, for each image placeholder the job catalog uses
+    secret: false
+    description: Image reference the launcher substitutes for a catalog profile's image placeholder.
+  - name: K8S_NAMESPACE
+    repos: [core]
+    default: default
+    required: "no"
+    secret: false
+    description: Namespace the API and launcher create Jobs in.
+  - name: DRAFT_SYNC_IMAGE
+    repos: [core]
+    default: null
+    required: yes, for drafts (POST /v1/draft/start returns 500 without it)
+    secret: false
+    description: Core image the API runs draft listener Jobs from.
+  - name: BROWSER_WORKER_IMAGE
+    repos: [core]
+    default: null
+    required: yes, for drafts
+    secret: false
+    description: Worker image the API runs draft clicker Jobs from.
+  - name: DRAFT_SYNC_ENV_SECRET
+    repos: [core]
+    default: null
+    required: yes, for drafts
+    secret: false
+    description: Name of the Secret holding the ESPN cookies and IDs that draft Jobs load.
+  - name: DRAFT_SYNC_ENV_CONFIGMAP
+    repos: [core]
+    default: null
+    required: yes, for drafts
+    secret: false
+    description: Name of the ConfigMap holding league settings that draft Jobs load.
+  - name: DRAFT_SYNC_DB_SECRET_NAME
+    repos: [core]
+    default: database-credentials
+    required: "no"
+    secret: false
+    description: Secret holding the Postgres password for draft Jobs.
+  - name: DRAFT_SYNC_DB_SECRET_KEY
+    repos: [core]
+    default: postgres-password
+    required: "no"
+    secret: false
+    description: Key within that Secret.
+
+  # Core: drafts
+  - name: DRAFT_PICK_CLOCK_SECONDS_LIVE
+    repos: [core]
+    default: "90"
+    required: "no"
+    secret: false
+    description: Pick clock the API assumes for a live draft.
+  - name: DRAFT_PICK_CLOCK_SECONDS_PRACTICE
+    repos: [core]
+    default: "30"
+    required: "no"
+    secret: false
+    description: Pick clock the API assumes for a practice draft.
+  - name: AUTO_DRAFT_DELAY_SECONDS_LIVE
+    repos: [core]
+    default: "45"
+    required: "no"
+    secret: false
+    description: How long into a live pick the bot waits before auto-publishing its choice.
+  - name: AUTO_DRAFT_DELAY_SECONDS_PRACTICE
+    repos: [core]
+    default: "15"
+    required: "no"
+    secret: false
+    description: Auto-publish delay for a practice draft.
+  - name: DRAFT_STATUS_STALENESS_SECONDS
+    repos: [core]
+    default: "15"
+    required: "no"
+    secret: false
+    description: Age after which the API reports draft status as stale.
+  - name: DRAFT_PICK_CLOCK_SECONDS
+    repos: [core]
+    default: "90 (set per Job by the API)"
+    required: "no"
+    secret: false
+    description: Pick clock the draft listener uses.
+  - name: AUTO_DRAFT_DELAY_SECONDS
+    repos: [core]
+    default: "8 (set per Job by the API)"
+    required: "no"
+    secret: false
+    description: Auto-publish delay the draft listener uses.
+  - name: DRAFT_MODE
+    repos: [core, worker]
+    default: "core: live; worker: none"
+    required: "no"
+    secret: false
+    description: live or practice. A practice draft lets the clicker submit even when DRY_RUN is unset; mock makes the worker join a practice lobby.
+  - name: MIN_AUTO_PUBLISH_WINDOW_SECONDS
+    repos: [core]
+    default: "10"
+    required: "no"
+    secret: false
+    description: Smallest time left on the clock in which the listener still auto-publishes.
+  - name: MAX_CONSECUTIVE_PUBLISH_FAILURES
+    repos: [core]
+    default: "3"
+    required: "no"
+    secret: false
+    description: Publish failures in a row before the listener stops auto-publishing.
+  - name: PICK_REJECTION_GRACE_SECONDS
+    repos: [core]
+    default: "10"
+    required: "no"
+    secret: false
+    description: How long the listener waits for a rejected pick to clear before acting again.
+
+  # Worker: drafts
+  - name: DRAFT_ROOM_URL
+    repos: [worker]
+    default: null
+    required: "no"
+    secret: false
+    description: Opens this draft room URL instead of navigating from the league.
+  - name: DRAFT_HEALTH_INTERVAL_MS
+    repos: [worker]
+    default: "10000"
+    required: "no"
+    secret: false
+    description: How often the draft sync checks its own health.
+  - name: DRAFT_PICK_SILENCE_WARN_MS
+    repos: [worker]
+    default: "180000"
+    required: "no"
+    secret: false
+    description: Warns when no pick has been seen for this long.
+  - name: DRAFT_STALL_TERMINAL_CYCLES
+    repos: [worker]
+    default: "3"
+    required: "no"
+    secret: false
+    description: Failed health cycles before the draft sync gives up.
+  - name: DRAFT_COMMAND_POLL_INTERVAL_MS
+    repos: [worker]
+    default: "1000"
+    required: "no"
+    secret: false
+    description: How often the draft sync polls Redis for pick commands.
+  - name: DRAFT_COMMAND_CONFIRM_TIMEOUT_MS
+    repos: [worker]
+    default: "5000"
+    required: "no"
+    secret: false
+    description: How long to wait for ESPN to confirm a pick command.
+  - name: DRAFT_DOM_POLL_INTERVAL_MS
+    repos: [worker]
+    default: "5000"
+    required: "no"
+    secret: false
+    description: How often the draft room page is re-read.
+  - name: DRAFT_WATCH_STALL_MS
+    repos: [worker]
+    default: "45000"
+    required: "no"
+    secret: false
+    description: Stall threshold for the draft-watch script.
+
+  # Core: decisions and retention
+  - name: MATCHUP_WEIGHTING_ENABLED
+    repos: [core]
+    default: "false"
+    required: "no"
+    secret: false
+    description: Weights VORP by opponent defense strength. Only the exact string true enables it.
+    docs: /integrations/nflverse
+  - name: RUMOR_ACTION_CONFIDENCE_THRESHOLD
+    repos: [core]
+    default: "0.75"
+    required: "no"
+    secret: false
+    description: Minimum rumor confidence before the rumor action job acts.
+  - name: OUTGOING_COMMIT_HOURS
+    repos: [core]
+    default: "72"
+    required: "no"
+    secret: false
+    description: How long an approved outgoing trade stays committed.
+  - name: ACTIVITY_DEPENDENCY_HOLD_SECONDS
+    repos: [core]
+    default: "3600"
+    required: "no"
+    secret: false
+    description: How long a dependent activity waits for the activity it depends on.
+  - name: LLM_CONTENT_RETENTION_DAYS
+    repos: [core]
+    default: "90"
+    required: "no"
+    secret: false
+    description: Days to keep captured LLM prompt and response text.
+  - name: RUN_LOG_RETENTION_DAYS
+    repos: [core]
+    default: "90"
+    required: "no"
+    secret: false
+    description: Days to keep run log rows.
+
+  # Core: MCP server
+  - name: MCP_GOOGLE_OAUTH_CLIENT_ID
+    repos: [core]
+    default: "null (the MCP endpoint rejects every token)"
+    required: yes, for /mcp
+    secret: false
+    description: Google OAuth client ID that MCP access tokens must be issued for.
+  - name: MCP_GOOGLE_ALLOWED_EMAIL
+    repos: [core]
+    default: null
+    required: yes, for /mcp
+    secret: false
+    description: The one Google account allowed to use the MCP endpoint.
+  - name: MCP_RESOURCE_URL
+    repos: [core]
+    default: http://fantasy-core-pipeline.default.svc.cluster.local:8000/mcp
+    required: "no"
+    secret: false
+    description: Public URL of the MCP endpoint, used as the OAuth resource.
+  - name: MCP_ALLOWED_HOSTS
+    repos: [core]
+    default: empty
+    required: "no"
+    secret: false
+    description: Comma-separated Host headers the MCP endpoint accepts.
+
+  # LLM providers
+  - name: LLM_PROVIDER_PRIORITY
+    repos: [core, worker]
+    default: "groq:openai/gpt-oss-120b, then gemini, then ollama:llama3.1:8b (the Gemini model differs between core and worker)"
+    required: "no"
+    secret: false
+    description: Ordered provider:model list to try.
+    docs: /integrations/llm-providers
+  - name: CHAT_LLM_PROVIDER_PRIORITY
+    repos: [core]
+    default: falls back to LLM_PROVIDER_PRIORITY
+    required: "no"
+    secret: false
+    description: Provider order for the chat endpoint. Ollama is always excluded.
+    docs: /integrations/llm-providers
+  - name: "{PROVIDER}_API_KEY"
+    pattern: true
+    examples: [GROQ_API_KEY, GEMINI_API_KEY]
+    repos: [core, worker]
+    default: "null (falls back to OpenBao)"
+    required: yes, for each hosted provider you use
+    secret: true
+    description: API key for a hosted LLM provider.
+    docs: /integrations/llm-providers
+  - name: "OPENBAO_{PROVIDER}_SECRET_PATH"
+    pattern: true
+    examples: [OPENBAO_GROQ_SECRET_PATH, OPENBAO_GEMINI_SECRET_PATH]
+    repos: [core, worker]
+    default: "secret/fantasy/<provider>"
+    required: "no"
+    secret: false
+    description: OpenBao path read for the provider's key when the variable is unset.
+  - name: "{PROVIDER}_RPM_LIMIT"
+    pattern: true
+    examples: [GROQ_RPM_LIMIT, GEMINI_RPM_LIMIT]
+    repos: [core, worker]
+    default: "groq 30, gemini 15"
+    required: "no"
+    secret: false
+    description: Requests per minute allowed per provider.
+  - name: LLM_REQUEST_TIMEOUT_SECONDS
+    repos: [core]
+    default: "15"
+    required: "no"
+    secret: false
+    description: Timeout for a hosted provider request from core.
+  - name: LLM_REQUEST_TIMEOUT_MS
+    repos: [worker]
+    default: "15000"
+    required: "no"
+    secret: false
+    description: Timeout for a hosted provider request from the worker.
+  - name: OLLAMA_REQUEST_TIMEOUT_SECONDS
+    repos: [core]
+    default: "100"
+    required: "no"
+    secret: false
+    description: Timeout for an Ollama request from core, which allows for a cold start.
+  - name: OLLAMA_REQUEST_TIMEOUT_MS
+    repos: [worker]
+    default: "100000"
+    required: "no"
+    secret: false
+    description: Timeout for an Ollama request from the worker.
+  - name: OLLAMA_URL
+    repos: [core, worker]
+    default: http://keda-add-ons-http-interceptor-proxy.keda.svc.cluster.local:8080
+    required: "no"
+    secret: false
+    description: Ollama URL. The default goes through the KEDA HTTP add-on, which scales Ollama from zero.
+  - name: OLLAMA_HOST_HEADER
+    repos: [core, worker]
+    default: ollama.default.svc.cluster.local (only when OLLAMA_URL is unset)
+    required: "no"
+    secret: false
+    description: Host header the KEDA interceptor routes on.
+  - name: OLLAMA_DIRECT_URL
+    repos: [worker]
+    default: http://ollama.default.svc.cluster.local:11434
+    required: "no"
+    secret: false
+    description: Ollama URL the worker uses for calls that bypass the interceptor.
+  - name: LLM_HISTORY_CAPTURE_CONTENT
+    repos: [core, worker]
+    default: "false (metadata only)"
+    required: "no"
+    secret: false
+    description: Set to true to store prompt and response text with each LLM call.
+    docs: /integrations/llm-providers
+
+  # Worker: trades and rumors
+  - name: TRADE_EVALUATE_TIMEOUT_MS
+    repos: [worker]
+    default: "10000"
+    required: "no"
+    secret: false
+    description: Timeout for the core trade evaluation call.
+  - name: TRADE_SCORE_TIMEOUT_MS
+    repos: [worker]
+    default: "30000 for scans, 20000 in the trade inbox"
+    required: "no"
+    secret: false
+    description: Timeout for the core trade score call.
+  - name: TRADE_CONTEXT_TIMEOUT_MS
+    repos: [worker]
+    default: "30000"
+    required: "no"
+    secret: false
+    description: Timeout for the core trade context and bye outlook calls.
+  - name: TRADE_INBOX_SHADOW_ACCEPT_MIN_SCORE
+    repos: [worker]
+    default: null
+    required: "no"
+    secret: false
+    description: Score at or above which the inbox's advisory shadow decision says accept.
+  - name: TRADE_INBOX_SHADOW_DECLINE_MAX_SCORE
+    repos: [worker]
+    default: null
+    required: "no"
+    secret: false
+    description: Score at or below which the inbox's advisory shadow decision says decline.
+  - name: RUMOR_DIGEST_CHUNK_SIZE
+    repos: [worker]
+    default: "20"
+    required: "no"
+    secret: false
+    description: Rumors per LLM request in the daily digest.
+  - name: RUMOR_DIGEST_TOKEN_BUDGET
+    repos: [worker]
+    default: "6000"
+    required: "no"
+    secret: false
+    description: Token budget per digest request.
+  - name: RUMOR_DIGEST_CHUNK_DELAY_MS
+    repos: [worker]
+    default: "60000"
+    required: "no"
+    secret: false
+    description: Pause between digest requests, to stay under provider rate limits.
+
+  # Core: rumor feeds
+  - name: REDDIT_CLIENT_ID
+    repos: [core]
+    default: "null (Reddit is skipped and only RSS feeds are read)"
+    required: "no"
+    secret: true
+    description: Reddit API app ID.
+    docs: /integrations/rumor-feeds
+  - name: REDDIT_CLIENT_SECRET
+    repos: [core]
+    default: null
+    required: "no"
+    secret: true
+    description: Reddit API app secret.
+    docs: /integrations/rumor-feeds
+  - name: REDDIT_USER_AGENT
+    repos: [core]
+    default: null
+    required: "no"
+    secret: false
+    description: User agent sent to Reddit.
+    docs: /integrations/rumor-feeds
+  - name: REDDIT_MIN_SCORE
+    repos: [core]
+    default: "20"
+    required: "no"
+    secret: false
+    description: Minimum post score to ingest.
+  - name: REDDIT_MAX_POST_AGE_HOURS
+    repos: [core]
+    default: "72"
+    required: "no"
+    secret: false
+    description: Oldest post to ingest.
+
+  # Notifications
+  - name: NTFY_URL
+    repos: [worker]
+    default: "null (nothing is sent)"
+    required: "no"
+    secret: false
+    description: ntfy server URL for phone notifications.
+    docs: /integrations/ntfy
+  - name: NTFY_TOKEN
+    repos: [worker]
+    default: "null (nothing is sent)"
+    required: "no"
+    secret: true
+    description: ntfy access token with publish rights to the topic.
+    docs: /integrations/ntfy
+  - name: NTFY_TOPIC
+    repos: [worker]
+    default: fantasy
+    required: "no"
+    secret: false
+    description: ntfy topic.
+    docs: /integrations/ntfy
+  - name: WEB_UI_BASE_URL
+    repos: [worker]
+    default: "null (pushes carry no link)"
+    required: "no"
+    secret: false
+    description: Public UI URL that notification taps open.
+    docs: /integrations/ntfy
+
+  # Web UI development
+  - name: VITE_DEV_LEAGUE_ID
+    repos: [ui]
+    default: empty
+    required: "no"
+    secret: false
+    description: League ID prefilled in dev builds only. Put it in .env.local.
+  - name: VITE_DEV_TEAM_ID
+    repos: [ui]
+    default: empty
+    required: "no"
+    secret: false
+    description: Team ID prefilled in dev builds only. Put it in .env.local.
+  - name: VITEST_MAX_WORKERS
+    repos: [ui]
+    default: 25%
+    required: "no"
+    secret: false
+    description: Vitest worker limit.
+
+  # Third-party images and tools that fantasy-infra configures
+  - name: POSTGRES_DB
+    repos: [platform]
+    default: null
+    required: "yes"
+    secret: false
+    description: Database the Postgres image creates on first start (fantasy_football).
+  - name: POSTGRES_USER
+    repos: [platform]
+    default: null
+    required: "yes"
+    secret: false
+    description: Owner the Postgres image creates (bot_admin).
+  - name: POSTGRES_PASSWORD
+    repos: [platform]
+    default: null
+    required: "yes"
+    secret: true
+    description: That user's password; the same value as DB_PASSWORD.
+  - name: PGDATA
+    repos: [platform]
+    default: null
+    required: "no"
+    secret: false
+    description: Postgres data directory inside the volume.
+  - name: PGHOST
+    repos: [platform]
+    default: null
+    required: "yes"
+    secret: false
+    description: psql connection for the read-only role Job.
+  - name: PGDATABASE
+    repos: [platform]
+    default: null
+    required: "yes"
+    secret: false
+    description: psql connection for the read-only role Job.
+  - name: PGUSER
+    repos: [platform]
+    default: null
+    required: "yes"
+    secret: false
+    description: psql connection for the read-only role Job.
+  - name: PGPASSWORD
+    repos: [platform]
+    default: null
+    required: "yes"
+    secret: true
+    description: psql connection for the read-only role Job.
+  - name: READONLY_PASSWORD
+    repos: [platform]
+    default: null
+    required: "yes"
+    secret: true
+    description: Password the Job sets on the grafana_reader role.
+    docs: /core/read-only-access
+  - name: RABBITMQ_DEFAULT_USER
+    repos: [platform]
+    default: null
+    required: "yes"
+    secret: true
+    description: Broker user that the definitions init container creates and the probes check.
+    docs: /infra/rabbitmq-queue-rollout
+  - name: RABBITMQ_DEFAULT_PASS
+    repos: [platform]
+    default: null
+    required: "yes"
+    secret: true
+    description: That user's password.
+  - name: RABBITMQ_VM_MEMORY_HIGH_WATERMARK_RELATIVE
+    repos: [platform]
+    default: null
+    required: "no"
+    secret: false
+    description: Share of container memory at which RabbitMQ blocks publishers (0.4).
+  - name: OAUTH2_PROXY_CLIENT_ID
+    repos: [platform]
+    default: null
+    required: "yes"
+    secret: true
+    description: Google OAuth client ID for the sign-in proxy.
+    docs: /ui/auth
+  - name: OAUTH2_PROXY_CLIENT_SECRET
+    repos: [platform]
+    default: null
+    required: "yes"
+    secret: true
+    description: Google OAuth client secret.
+  - name: OAUTH2_PROXY_COOKIE_SECRET
+    repos: [platform]
+    default: null
+    required: "yes"
+    secret: true
+    description: Key that signs the session cookie.
+  - name: OAUTH2_PROXY_REDIRECT_URL
+    repos: [platform]
+    default: null
+    required: "yes"
+    secret: true
+    description: Your public callback URL, ending in /oauth2/callback. Production keeps it in OpenBao.
+  - name: OAUTH2_PROXY_COOKIE_DOMAINS
+    repos: [platform]
+    default: null
+    required: "yes"
+    secret: true
+    description: Domain the session cookie is set for. Production keeps it in OpenBao.
+  - name: ARGOCD_IMAGE_UPDATER_KUSTOMIZE_V5
+    repos: [platform]
+    default: null
+    required: "no"
+    secret: false
+    description: Image Updater setting; see the Argo CD Image Updater docs.
+  - name: ARGOCD_IMAGE_UPDATER_GIT_COMMIT_USER
+    repos: [platform]
+    default: null
+    required: "no"
+    secret: false
+    description: Author of the Image Updater's digest commits.
+  - name: ARGOCD_IMAGE_UPDATER_GIT_COMMIT_EMAIL
+    repos: [platform]
+    default: null
+    required: "no"
+    secret: false
+    description: Email on the Image Updater's digest commits.
+  - name: ARGOCD_IMAGE_UPDATER_WRITE_BACK_METHOD
+    repos: [platform]
+    default: null
+    required: "no"
+    secret: false
+    description: git, so new digests are committed to fantasy-infra.
+  - name: ARGOCD_IMAGE_UPDATER_WRITE_BACK_TARGET
+    repos: [platform]
+    default: null
+    required: "no"
+    secret: false
+    description: kustomization, so digests land in the overlay's images list.
+  - name: ARGOCD_IMAGE_UPDATER_LOG_LEVEL
+    repos: [platform]
+    default: null
+    required: "no"
+    secret: false
+    description: Image Updater log level.
+  - name: ARGOCD_IMAGE_UPDATER_HEALTH_PORT
+    repos: [platform]
+    default: null
+    required: "no"
+    secret: false
+    description: Image Updater health port.
+
+ignore:
+  - name: HOSTNAME
+    reason: Set by the container runtime; used only as a fallback pod name.
+  - name: WEBSOCKIFY_PID
+    reason: Internal to start-vnc.sh.
+  - name: X11VNC_PID
+    reason: Internal to start-vnc.sh.
+  - name: XVFB_PID
+    reason: Internal to start-vnc.sh.
+  - name: SPORT_TYPE
+    reason: Set in fantasy-league-config, but no code reads it.

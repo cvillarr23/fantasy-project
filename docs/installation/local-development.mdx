@@ -1,0 +1,144 @@
+---
+title: Local development
+description: Install each repository, start Postgres, Redis and RabbitMQ with Docker Compose, and run each repo's tests.
+sidebar_position: 1
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+Set up all three services on one machine, backed by containers for Postgres, Redis and RabbitMQ. None of the test suites needs those containers or ESPN; you need them only to run the services.
+
+:::info[Prerequisites]
+
+| Tool | Version | Used by |
+|---|---|---|
+| Git | any | all |
+| Docker with Compose v2 | any recent | the dependency stack in `dev/compose.yaml` |
+| Python | **3.11**. On 3.13 or later the pinned `pydantic-core` and `psycopg2-binary` fail to build. | core |
+| Node | **20** for the worker; **22.12 or later** for the web UI (its jsdom needs 22.22.2 or later) | worker, web UI |
+| npm | the version bundled with Node | worker, web UI |
+
+[uv](https://docs.astral.sh/uv/) can install Python 3.11 next to your system Python (`uv python install 3.11`). nvm or fnm can switch Node versions per repo.
+:::
+
+## 1. Clone the repositories side by side
+
+Keep all five checkouts in one folder. The paths on these pages assume this layout, and so does the docs site's local build.
+
+```bash
+mkdir fantasy && cd fantasy
+for repo in fantasy-project fantasy-core-pipeline fantasy-browser-worker fantasy-web-ui fantasy-infra; do
+  git clone "https://github.com/cvillarr23/$repo.git"
+done
+```
+
+## 2. Start Postgres, Redis and RabbitMQ
+
+```bash
+docker compose -f fantasy-project/dev/compose.yaml up -d --wait
+```
+
+| Service | Address | Credentials |
+|---|---|---|
+| Postgres 16 | `127.0.0.1:5432`, database `fantasy_football` | `bot_admin` / `fantasy-local-only` |
+| Redis 7 | `127.0.0.1:6379` | none |
+| RabbitMQ 3 | `127.0.0.1:5672`; management UI at `http://127.0.0.1:15672` | `fantasy` / `fantasy-local-only` |
+
+RabbitMQ loads `dev/rabbitmq/definitions.json` at startup. That file declares the queues core publishes to, because core only checks that `lineup_updates`, `waiver_actions`, `draft_targets` and `job_runs` exist; it doesn't create them. The definitions mirror the broker ConfigMap in fantasy-infra.
+
+The ports bind to `127.0.0.1` only, and the passwords are for local use. To start over with empty data, run `docker compose -f fantasy-project/dev/compose.yaml down -v`.
+
+## 3. Load the shared environment
+
+`fantasy-project/dev/local.env` points every service at the containers and turns on dry run for every bot. Load it in each terminal you run a service from:
+
+```bash
+set -a; . fantasy-project/dev/local.env; set +a
+```
+
+Don't commit real values to it. Put your league IDs and ESPN cookies in your shell or in a copy outside the repository. [Configuration](./configuration.mdx) describes every variable.
+
+## 4. Install and test each repository
+
+<Tabs groupId="repo">
+<TabItem value="core" label="core" default>
+
+```bash
+cd fantasy-core-pipeline
+python3.11 -m venv venv      # or: uv venv -p 3.11 venv
+source venv/bin/activate
+pip install -r requirements.txt
+```
+
+| To | Run |
+|---|---|
+| Run the tests (blocking in CI) | `DB_PASSWORD=test pytest tests/` |
+| Also run the Postgres-backed tests | Add `ACTIVITY_TEST_DSN="host=127.0.0.1 port=5432 dbname=postgres user=bot_admin password=fantasy-local-only"`. Point it at `postgres`, not `fantasy_football`, so the tests don't touch your data. |
+| Format and type-check (advisory in CI) | `black --check .` and `mypy src/` |
+| Start the API | `uvicorn src.api.main:app --host 127.0.0.1 --port 8000`. It runs the schema migrations on startup. |
+| Run a job | `python -m <module>`, such as `python -m src.ingestion.sync_players --force`. See [First run](./first-run.md). |
+
+The tests mock Postgres, Redis and RabbitMQ.
+
+</TabItem>
+<TabItem value="worker" label="browser worker">
+
+```bash
+cd fantasy-browser-worker    # Node 20
+npm ci
+npx playwright install chromium
+```
+
+| To | Run |
+|---|---|
+| Run the tests | `npm test` |
+| Lint | `npm run lint` |
+| Start the queue consumer | `npm start`. It retries the broker 10 times with backoff, then exits. |
+| Run one bot by hand | `node src/bots/<bot>.js`, such as `node src/bots/check_espn_session.js` |
+
+The worker doesn't read `.env` files. Load `local.env` as in step 3, or run `node --env-file=../fantasy-project/dev/local.env src/index.js`. The tests mock Postgres, Redis, RabbitMQ and Playwright.
+
+To send traces locally, set `NODE_OPTIONS=--require ./src/telemetry/init.js` and `OTEL_EXPORTER_OTLP_ENDPOINT`. The image sets the first one for you.
+
+</TabItem>
+<TabItem value="ui" label="web UI">
+
+```bash
+cd fantasy-web-ui    # Node 22.22.2 or later
+npm ci
+```
+
+| To | Run |
+|---|---|
+| Start the dev server | `npm run dev`, then open `http://localhost:5173` |
+| Run the unit tests | `npm test` |
+| Run the component story tests | `npx playwright install chromium`, then `npm run test:stories` |
+| Lint and type-check | `npm run lint` and `npx tsc -b --noEmit` |
+| Build | `npm run build` |
+
+The dev server proxies `/v1` to `VITE_API_PROXY_TARGET` and adds `X-API-Key: $TRIGGER_API_KEY` to the write routes. It reads both from the shell, not from `.env.local`. More detail is in [Run locally](/ui/developer/running-locally).
+
+</TabItem>
+</Tabs>
+
+## 5. Verify
+
+With the API, worker and dev server running:
+
+| Check | Expect |
+|---|---|
+| `curl http://127.0.0.1:8000/v1/health` | `{"status":"healthy","database":"connected","broker":"connected"}` |
+| `curl http://localhost:5173/v1/health` | The same, through the UI's proxy |
+| Worker log | `Ready to consume target queue` for each queue, then `Standing by...` |
+
+## Troubleshooting
+
+| Symptom | Fix |
+|---|---|
+| `pip install` fails building `pydantic-core` or `psycopg2-binary` | You're on Python 3.13 or later. Recreate the venv with 3.11. |
+| Worker logs `fantasy-broker.databases.svc.cluster.local` | `AMQP_URL` isn't set, so the worker fell back to the cluster default. Load `local.env`. |
+| Core logs `vhost  not found` | The URL ends in `/` or `//`. End it with `/%2f`. |
+| A job fails publishing with `NOT_FOUND - no queue` | RabbitMQ started without the definitions. Run `docker compose -f fantasy-project/dev/compose.yaml down -v` and start it again. |
+| A lineup, waiver or draft action in the UI shows "Session expired" | The API answered 401 because `TRIGGER_API_KEY` differs between the API's shell and the dev server's. With no key on the API, it answers 500 instead. |
+| UI tests fail to start | Node is older than 22.22.2. |
