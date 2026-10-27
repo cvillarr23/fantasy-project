@@ -33,9 +33,9 @@ Workflows declare their permissions explicitly:
 | Build and test | Read contents |
 | Issue automation | Write issues |
 | Image publication | Write packages, only on a push to the default branch |
-| Issue-link check | Pull request write, to manage labels and comments on trusted PRs |
+| Issue-link check | Pull request write, to manage labels and comments on trusted PRs; Dependabot PRs are exempt |
 
-For fork and Dependabot PRs, the issue-link check skips labels and comments. It reports missing links in the check and explains any failure to read closing issue references.
+For fork PRs, the issue-link check skips labels and comments and reports missing links in the check. Dependabot PRs are exempt from the linked-issue requirement. The check identifies Dependabot by the pull request author, so maintainer activity on a Dependabot PR does not change the exemption.
 
 ### Linking to the shared tracker
 
@@ -116,7 +116,7 @@ To require them later, first replace workflow-level path filters with jobs that 
 ## Verify the ruleset
 
 1. Open a normal PR, a fork PR and a Dependabot PR. The fork PR's workflows wait for approval and then run on GitHub-hosted runners.
-2. Confirm the linked-issue check passes for linked fork PRs, or gives a clear permission message.
+2. Confirm the linked-issue check passes for linked fork PRs, or gives a clear permission message; confirm Dependabot PRs pass without an issue link.
 3. Confirm it fails clearly for unlinked PRs.
 4. Confirm branch deletion and force pushes are rejected.
 
