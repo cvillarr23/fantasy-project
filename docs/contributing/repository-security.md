@@ -105,8 +105,11 @@ To require them later, first replace workflow-level path filters with jobs that 
 
 ## Other repository settings
 
-- Fork pull request workflows require approval from **all external contributors**.
+- Workflows on fork pull requests from **all external contributors** wait for maintainer approval before they run.
 - Vulnerability alerts, Dependabot security updates, secret scanning and push protection are enabled.
+- Private vulnerability reporting is enabled. Each repository's `SECURITY.md` points reporters to it.
+- CodeQL code scanning uses GitHub's default setup. Its `Analyze` jobs report on PRs but aren't required checks.
+- Branches are deleted automatically when their pull request merges.
 - Keep fork tokens read-only and secrets unavailable to fork PRs. Don't enable sending write tokens or secrets to fork workflows.
 - If spam or abuse starts, use **Settings → Moderation → Interaction limits** to restrict issues, PRs and comments to collaborators for up to six months.
 
