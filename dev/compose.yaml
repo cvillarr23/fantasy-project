@@ -1,0 +1,37 @@
+# Postgres, Redis and RabbitMQ for running the fantasy-* services on your machine.
+# See docs/installation/local-development.mdx. The passwords here are for local use only.
+name: fantasy-local
+
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: fantasy_football
+      POSTGRES_USER: bot_admin
+      POSTGRES_PASSWORD: fantasy-local-only
+    ports: ["127.0.0.1:5432:5432"]
+    volumes: [postgres:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "bot_admin", "-d", "fantasy_football"]
+      interval: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports: ["127.0.0.1:6379:6379"]
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    ports: ["127.0.0.1:5672:5672", "127.0.0.1:15672:15672"]
+    volumes:
+      - ./rabbitmq/rabbitmq.conf:/etc/rabbitmq/conf.d/20-fantasy.conf:ro
+      - ./rabbitmq/definitions.json:/etc/rabbitmq/definitions.json:ro
+      - rabbitmq:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "check_port_connectivity"]
+      interval: 10s
+      retries: 10
+
+volumes:
+  postgres:
+  rabbitmq:

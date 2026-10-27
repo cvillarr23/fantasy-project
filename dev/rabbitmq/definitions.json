@@ -1,0 +1,36 @@
+{
+  "users": [
+    {
+      "name": "fantasy",
+      "password_hash": "aeDyS49TLlKFiOyCexOoiqIfT70z79EYk7et2OSfzmadpJcC",
+      "hashing_algorithm": "rabbit_password_hashing_sha256",
+      "tags": ["administrator"]
+    }
+  ],
+  "vhosts": [{"name": "/"}],
+  "permissions": [
+    {"user": "fantasy", "vhost": "/", "configure": ".*", "write": ".*", "read": ".*"}
+  ],
+  "queues": [
+    {"name": "lineup_updates", "vhost": "/", "durable": true, "auto_delete": false, "arguments": {}},
+    {"name": "waiver_actions", "vhost": "/", "durable": true, "auto_delete": false, "arguments": {}},
+    {"name": "draft_targets", "vhost": "/", "durable": true, "auto_delete": false, "arguments": {}},
+    {"name": "trade_submissions", "vhost": "/", "durable": true, "auto_delete": false, "arguments": {}},
+    {"name": "trade_responses", "vhost": "/", "durable": true, "auto_delete": false, "arguments": {}},
+    {"name": "job_runs", "vhost": "/", "durable": true, "auto_delete": false, "arguments": {}},
+    {"name": "lineup_updates.dlq", "vhost": "/", "durable": true, "auto_delete": false, "arguments": {}},
+    {"name": "waiver_actions.dlq", "vhost": "/", "durable": true, "auto_delete": false, "arguments": {}},
+    {"name": "draft_targets.dlq", "vhost": "/", "durable": true, "auto_delete": false, "arguments": {}}
+  ],
+  "exchanges": [
+    {"name": "dlx", "vhost": "/", "type": "direct", "durable": true, "auto_delete": false, "internal": false, "arguments": {}}
+  ],
+  "bindings": [
+    {"source": "dlx", "vhost": "/", "destination": "lineup_updates.dlq", "destination_type": "queue", "routing_key": "lineup_updates", "arguments": {}},
+    {"source": "dlx", "vhost": "/", "destination": "waiver_actions.dlq", "destination_type": "queue", "routing_key": "waiver_actions", "arguments": {}},
+    {"source": "dlx", "vhost": "/", "destination": "draft_targets.dlq", "destination_type": "queue", "routing_key": "draft_targets", "arguments": {}}
+  ],
+  "policies": [
+    {"vhost": "/", "name": "fantasy-dead-letter", "pattern": "^(lineup_updates|waiver_actions|draft_targets)$", "apply-to": "queues", "definition": {"dead-letter-exchange": "dlx"}, "priority": 10}
+  ]
+}

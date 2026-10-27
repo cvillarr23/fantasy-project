@@ -1,0 +1,39 @@
+---
+title: Configuration
+description: League, team and season settings, and every environment variable the services read, with defaults and which ones are secrets.
+sidebar_position: 5
+---
+
+import EnvReference from '@site/src/components/EnvReference';
+
+Look up a setting here. The environment variable tables are built from the code on every site build, so each row links to where the variable is read.
+
+## League, team and season
+
+Three settings identify your team. Set them in each place that reads them.
+
+| Setting | Locally | On Kubernetes | In the UI |
+|---|---|---|---|
+| League ID | `ESPN_LEAGUE_ID` | `fantasy/deployment` in the secret store, as `ESPN_LEAGUE_ID` | **Settings** page |
+| Team ID | `ESPN_TEAM_ID` | `fantasy/deployment`, as `ESPN_TEAM_ID` | **Settings** page |
+| Season | `CURRENT_YEAR` | `fantasy-league-config` ConfigMap, plus the `--season` arguments in two CronJobs | **Settings** page |
+
+Both IDs are in your team's ESPN URL: `…/team?leagueId=<league>&teamId=<team>`. The deployment treats them as private and keeps them out of Git.
+
+## Write safety
+
+Which bots may write to ESPN is set by `DRY_RUN`, `TRADE_DRY_RUN`, `TRADE_SUBMIT_ENABLED`, `TRADE_RESPONSE_ENABLED` and `AUTO_PUBLISH_IR_MOVES`. Their defaults differ by bot. See [Run with every write disabled](./dry-run.md) before you change any of them.
+
+## Environment variables
+
+| Column | Meaning |
+|---|---|
+| Default | What applies when the variable is unset. A dash means nothing does. |
+| Required | Whether you must set it, or the condition that makes it required. Many defaults are in-cluster addresses, so outside the cluster you set them anyway. |
+| Labels under the name | **Secret**: the value is a credential. **Set in production**: fantasy-infra sets it, possibly from a Secret. |
+
+<EnvReference />
+
+## How is this page kept current?
+
+The descriptions live in [`docs/installation/env-vars.yaml`](https://github.com/cvillarr23/fantasy-project/blob/main/docs/installation/env-vars.yaml). Each full site build scans core, the worker, the UI and fantasy-infra, and fails when a variable is read or set but not described, described but no longer read, or set from a Secret but not marked secret. The nightly build catches a new variable within a day. To check before you push, run `npm run check:env` from this repository with the other checkouts next to it, or with `FANTASY_DOCS_ROOT` pointing at them.

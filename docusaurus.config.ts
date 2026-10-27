@@ -4,6 +4,7 @@ import type * as Preset from '@docusaurus/preset-classic';
 import type {Options as DocsOptions} from '@docusaurus/plugin-content-docs';
 import {existsSync, readFileSync} from 'node:fs';
 import path from 'node:path';
+import {buildReference, metadataPath} from './scripts/env-reference.mjs';
 
 const repoUrl = 'https://github.com/cvillarr23/fantasy-project';
 
@@ -170,6 +171,27 @@ const config: Config = {
         },
         async contentLoaded({content, actions}) {
           actions.setGlobalData({schema: content});
+        },
+      };
+    },
+    // Renders docs/installation/env-vars.yaml with where each variable is read, and checks
+    // it against the source checkouts (scripts/env-reference.mjs).
+    function envReference() {
+      const root = path.resolve(process.env.FANTASY_DOCS_ROOT ?? '..');
+      return {
+        name: 'env-reference',
+        getPathsToWatch: () => [metadataPath],
+        async loadContent() {
+          const reference = buildReference(root, {scanRepos: process.env.FANTASY_DOCS_SITE_ONLY !== 'true'});
+          if (reference.problems.length > 0) {
+            const message = `Environment variable reference is out of date (docs/installation/env-vars.yaml):\n${reference.problems.map((p) => `  - ${p}`).join('\n')}`;
+            if (process.env.FANTASY_DOCS_REQUIRED === 'true') throw new Error(message);
+            console.warn(message);
+          }
+          return reference;
+        },
+        async contentLoaded({content, actions}) {
+          actions.setGlobalData(content);
         },
       };
     },

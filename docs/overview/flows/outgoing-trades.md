@@ -72,7 +72,7 @@ stateDiagram-v2
 
 | Lock | Open when |
 |---|---|
-| `DRY_RUN` | Explicitly `false` |
+| `TRADE_DRY_RUN` | Explicitly `false`, or unset with `DRY_RUN` explicitly `false` |
 | `TRADE_SUBMIT_ENABLED` | `true`, `1` or `yes` |
 | Approval | The message's `offer_key` equals the key recomputed from the offer |
 | Selectors | Every submit selector is marked verified in `espn_selectors.json` |
