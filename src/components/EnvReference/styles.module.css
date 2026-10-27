@@ -1,0 +1,46 @@
+/* Docusaurus renders Markdown tables as scrolling blocks sized to their content; these
+   tables are wide, so lay them out across the full column instead. */
+.table {
+  display: table;
+  width: 100%;
+  table-layout: fixed;
+}
+
+.table td {
+  vertical-align: top;
+}
+
+.table code {
+  overflow-wrap: anywhere;
+}
+
+.name {
+  width: 26%;
+}
+
+.required {
+  width: 15%;
+}
+
+.default {
+  width: 22%;
+}
+
+.meta {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: 0.8rem;
+  color: var(--ifm-color-emphasis-700);
+}
+
+@media (max-width: 996px) {
+  .table {
+    display: block;
+    overflow-x: auto;
+    table-layout: auto;
+  }
+
+  .table td {
+    min-width: 9rem;
+  }
+}

@@ -31,14 +31,14 @@ flowchart LR
 
 ## What does each bot do by default?
 
-`DRY_RUN` goes live only on `0`, `false` or `no`. Production sets no `DRY_RUN`, so each bot's default below applies.
+`DRY_RUN` goes live only on `0`, `false` or `no`. `TRADE_DRY_RUN` overrides it for the trade builder only, parsed the same way. Production sets no `DRY_RUN`, so each bot's default below applies, and sets `TRADE_DRY_RUN=false` so armed trade submissions can go live.
 
 | Bot | Default | Also required for a live write |
 |---|---|---|
 | Lineup | **Live** | Nothing beyond the trigger's own checks |
 | Waiver sniper | Dry run | `dry_run: false` in the message, which the UI's confirm dialog sends, or `DRY_RUN=false` |
 | Draft clicker | Dry run | `DRY_RUN=false`. A `practice` message defaults to live in the practice room. |
-| Trade builder | Dry run | `TRADE_SUBMIT_ENABLED`, a matching `offer_key` approval, verified selectors, and verified counter linkage for counters |
+| Trade builder | Dry run | `TRADE_DRY_RUN=false` (or `DRY_RUN=false` when `TRADE_DRY_RUN` is unset), `TRADE_SUBMIT_ENABLED`, a matching `offer_key` approval, verified selectors, and verified counter linkage for counters |
 | Trade response | Dry run | `TRADE_RESPONSE_ENABLED`, a matching `decision_key` approval, a verified action and a verified pending-trade shape |
 | Trade negotiation, trade scan | Never sends | They only stage offers for approval. |
 
@@ -61,6 +61,7 @@ With a gate closed, trade bots still fill or build the request and record exactl
 | Flag | Where | Default | Controls |
 |---|---|---|---|
 | `DRY_RUN` | Worker environment | Per bot, above | Every worker ESPN write |
+| `TRADE_DRY_RUN` | Worker environment | Falls back to `DRY_RUN` | Trade builder submissions only. Production sets `"false"` on the worker ScaledJob. |
 | `TRADE_SUBMIT_ENABLED` | Worker environment | Off | Sending outgoing offers |
 | `TRADE_RESPONSE_ENABLED` | Worker environment | Off | Accepting or declining incoming offers |
 | `AUTO_PUBLISH_IR_MOVES` | `fantasy-league-config` ConfigMap | `"false"` | Unattended IR move + add chains from the waiver evaluator and rumor actions |

@@ -82,7 +82,7 @@ Update the repo's `docs/` folder in the same PR as the behavior, API, configurat
 |---|---|
 | New or changed core API route | Regenerate `docs/openapi.json` and the API reference. See [Checks and tests](./checks.md). |
 | New queue or message field | The queue docs and the AsyncAPI spec in core. |
-| New env var or setting | The repo's configuration page. |
+| New or removed env var | An entry in this repo's [`docs/installation/env-vars.yaml`](https://github.com/cvillarr23/fantasy-project/blob/main/docs/installation/env-vars.yaml). The nightly docs build fails until the [configuration reference](/installation/configuration) matches the code. |
 | Cross-repo behavior | The matching page in this repo, such as an [end-to-end flow](/overview/flows/). |
 
 Follow the [docs style guide](./docs-style-guide.md).
