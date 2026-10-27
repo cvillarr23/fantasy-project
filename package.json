@@ -41,7 +41,7 @@
     "@types/react": "^19.0.0",
     "license-checker": "25.0.1",
     "typescript": "~7.0.2",
-    "wrangler": "4.149.0"
+    "wrangler": "4.153.0"
   },
   "browserslist": {
     "production": [
