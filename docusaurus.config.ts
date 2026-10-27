@@ -21,16 +21,15 @@ const repoDocsAvailable = (repo: (typeof repositories)[number]) =>
   process.env.FANTASY_DOCS_SITE_ONLY !== 'true' && existsSync(repoDocsSource(repo));
 
 // A placeholder section is a single index page, so every link into that
-// repo's docs breaks. Builds without the other checkouts (Dependabot and fork
-// PRs, local runs) still report broken links, but as warnings; full builds
-// keep failing on them.
+// repo's docs breaks. Local runs without sibling checkouts use warnings;
+// CI requires every public source checkout and fails on broken links.
 const brokenLinkSeverity = repositories.every(repoDocsAvailable) ? 'throw' : 'warn';
 
 const repoDocsPlugins: NonNullable<Config['plugins']> = repositories.map((repo) => {
   const source = repoDocsSource(repo);
   const available = repoDocsAvailable(repo);
   if (!available && process.env.FANTASY_DOCS_REQUIRED === 'true') {
-    throw new Error(`Missing ${source}. Check DOCS_REPOS_READ_TOKEN and the repository checkouts.`);
+    throw new Error(`Missing ${source}. Check the repository checkouts.`);
   }
   if (!available) console.warn(`Using local placeholder for ${repo.name}; checkout its docs to see the full section.`);
   return ['@docusaurus/plugin-content-docs', {

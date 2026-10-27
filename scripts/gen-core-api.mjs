@@ -11,7 +11,7 @@ const fallbackSpec = 'repo-docs-fallback/core/openapi.json';
 const coreSpec = path.resolve(process.env.FANTASY_DOCS_ROOT ?? '..', 'fantasy-core-pipeline', 'docs', 'openapi.json');
 const useCore = process.env.FANTASY_DOCS_SITE_ONLY !== 'true' && existsSync(coreSpec);
 if (!useCore && process.env.FANTASY_DOCS_REQUIRED === 'true') {
-  throw new Error(`Missing ${coreSpec}. Check DOCS_REPOS_READ_TOKEN and the repository checkouts.`);
+  throw new Error(`Missing ${coreSpec}. Check the repository checkouts.`);
 }
 const spec = JSON.parse(readFileSync(useCore ? coreSpec : fallbackSpec, 'utf8'));
 
