@@ -3,6 +3,8 @@ Cross-cutting planning/epics for the fantasy-* project — home of the wayfinder
 
 Fantasy Project is unofficial and not affiliated with ESPN or Disney. It is for personal use on your own leagues. Read the [disclaimer and scope](DISCLAIMER.md) before using it.
 
+**Documentation: <https://fantasy-docs.roo-net.cc>** covers the architecture, installation, every component and how to contribute.
+
 The docs site is [Docusaurus](https://docusaurus.io/), built from this repo's `docs/`
 and the four source repositories' `docs/` folders. Local development reads sibling
 checkouts (`../fantasy-core-pipeline`, `../fantasy-browser-worker`,
