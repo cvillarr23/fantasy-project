@@ -13,6 +13,7 @@ Each page in this section follows one kind of action from its trigger to a verif
 | [Outgoing trades](./outgoing-trades.md) | Wednesday and Friday trade scan | `trade_submissions` | Yes, per offer |
 | [Incoming trades](./incoming-trades.md) | Trade inbox refresh every 2 h | `trade_responses`, `trade_negotiations` | Yes, per response |
 | [Draft day](./draft-day.md) | ESPN draft room picks | `draft_targets` | Optional: pause, or turn off auto-publish |
+| [Job launcher](./job-launcher.md) | Schedules, chains, events, the Jobs page, CLI and MCP | `job_runs` | No. Pause jobs that act on ESPN. |
 
 ## What does every action go through?
 
@@ -39,7 +40,7 @@ sequenceDiagram
 
 | Stage | What happens | Where to read more |
 |---|---|---|
-| Trigger | A CronJob, the UI or another service calls core. Callers send an idempotency key. | [Queue publishing](/core/queue-publishing#how-does-idempotency-work) |
+| Trigger | The job launcher, the UI or another service calls core. Callers send an idempotency key. | [Queue publishing](/core/queue-publishing#how-does-idempotency-work) |
 | Record | Core saves the action, the message and the decision evidence in one transaction. A repeat key returns `duplicate` with the original `tracking_id`. | [Activity submissions](/core/activity-api) |
 | Publish | Lineup, waiver and draft messages go through the outbox, which the activity runner retries if the broker was down. Trade messages are claimed in `execution_log` first, then published directly. | [Queue publishing](/core/queue-publishing) |
 | Execute | KEDA starts a worker Job. The worker claims the `tracking_id`, so two pods can't run the same action. | [How bots run](/worker/how-bots-run) |

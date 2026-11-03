@@ -9,6 +9,7 @@ Cross-cutting pages that span more than one repository. Start with the architect
 | Page | Read it to |
 |---|---|
 | [Architecture](./architecture.md) | See the services, stores, queues, schedules, deployment and observability. |
+| [Job launcher](./job-launcher.md) | Learn the terms behind scheduled and on-demand jobs: catalog, runs, triggers, chains, events and limits. |
 | [End-to-end flows](./flows/index.md) | Follow a lineup, waiver, trade or draft action from its trigger to a verified ESPN change. |
 | [Safety model](./safety-model.md) | Learn what stops an unintended ESPN write: dry runs, approvals, flags, error classes and read-backs. |
 | [Project map](./project-map.md) | Check open epics and their progress, generated from GitHub. |
