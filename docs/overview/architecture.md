@@ -4,7 +4,7 @@ description: How the four fantasy-* services, their shared stores, the RabbitMQ 
 sidebar_position: 1
 ---
 
-The system decides roster moves in one service and carries them out against ESPN in another. Between them sit a RabbitMQ bus and Postgres, which records each action and its outcome. Use this page to find which component owns a step. Use [End-to-end flows](./flows/index.md) to follow one action through the system.
+The system decides roster moves in one service and carries them out against ESPN in another. Between them sit a RabbitMQ bus and Postgres, which records each action and its outcome. Use this page to find which component owns a step. Use [End-to-end flows](./flows/index.md) to follow one action through the system, and [Job launcher](./job-launcher.md) for how jobs start.
 
 :::tip[The short version]
 - **Core decides and publishes.** `fantasy-core-pipeline` is the only service that publishes ESPN actions to RabbitMQ.
@@ -19,7 +19,11 @@ flowchart LR
     user([You]) -->|HTTPS| proxy[oauth2-proxy]
     proxy --> ui["web-ui<br/>(nginx + React)"]
     ui -->|"/v1/* + X-API-Key"| api["core-pipeline<br/>FastAPI"]
-    cron["CronJobs"] -->|"solvers, ingestion,<br/>/v1/trigger/*"| api
+    launcher["Job launcher"] -->|"solvers, ingestion,<br/>/v1/trigger/*"| api
+    ui -->|"/v1/jobs/*"| api
+    launcher <-->|"job_runs, job_events"| mq
+    catalog[/"Job catalog"/] --> launcher
+    launcher -->|"creates k8s Jobs,<br/>writes run_log"| pg
     api <--> pg[("Postgres")]
     api <--> redis[("Redis")]
     api -->|"lineup_updates, waiver_actions,<br/>draft_targets, trade_*"| mq[("RabbitMQ")]
@@ -35,10 +39,11 @@ flowchart LR
 | Web UI | `fantasy-web-ui` | React console for lineups, waivers, trades, the inbox, activity and draft day. nginx serves it and proxies `/v1/*` to core. |
 | oauth2-proxy | `fantasy-infra` | Signs you in before any UI page or API call. The API itself doesn't check user identity. See [Authentication](/ui/auth). |
 | Core API | `fantasy-core-pipeline` | FastAPI control plane. It reads data for the UI, scores trades, records actions and publishes them to RabbitMQ. See the [API reference](/core/api-reference). |
-| Ingestion and solvers | `fantasy-core-pipeline` | Python modules run by CronJobs. They sync players, projections and scores, compute VORP, and pick lineups and waiver claims. See [Decision pipelines](/core/decision-pipelines). |
+| Ingestion and solvers | `fantasy-core-pipeline` | Python modules the job launcher runs as Kubernetes Jobs. They sync players, projections and scores, compute VORP, and pick lineups and waiver claims. See [Decision pipelines](/core/decision-pipelines). |
+| Job launcher | `fantasy-core-pipeline` | One process, `python -m src.launcher`, that turns schedules, chains, events and on-demand requests into Kubernetes Jobs and records each in `run_log`. The catalog of jobs lives in `fantasy-infra`. See [Job launcher](./job-launcher.md). |
 | Browser worker | `fantasy-browser-worker` | Node.js bots that act on ESPN through its REST API, a Playwright browser or the draft-room WebSocket. See [Browser worker](/worker/). |
 | LLM chain | `fantasy-browser-worker` | Groq, then Gemini, then a self-hosted Ollama. The chain writes trade pitches and rumor digests, and drafts trade packages only when the scored candidate set is unavailable. LLM output never reaches ESPN without human approval. |
-| Infrastructure | `fantasy-infra` | Kustomize manifests for every service, store, CronJob, dashboard and alert. |
+| Infrastructure | `fantasy-infra` | Kustomize manifests for every service and store, the job catalog, dashboards and alerts. |
 
 ## Where is state kept?
 
@@ -46,9 +51,10 @@ flowchart LR
 |---|---|---|
 | Postgres (TimescaleDB) | Players, projections, `weekly_stats` VORP, `league_rosters`, `draft_picks`, rumor signals | Core ingestion |
 | Postgres: activity tables | `activity_actions`, `activity_outbox`, `activity_events`: each queued action, its pending message and its timeline | Core API, worker |
+| Postgres: run tables | `run_log` (one row per job run), `job_overrides` (pauses), `launcher_heartbeat` | Launcher, jobs |
 | Postgres: audit tables | `bot_decisions` (why core published) and `execution_log` (what the worker did, trade inbox rows, trade claims) | Core API, worker |
 | Redis | Draft-day pick stream, draft board, per-pick pause flags, draft-sync health | Draft sync, draft listener, core API |
-| RabbitMQ | Durable work queues, one per action type | Core publishes, worker consumes |
+| RabbitMQ | Durable work queues, one per action type, plus `job_runs` (run commands) and the `job_events` topic | Core publishes, worker consumes. The launcher consumes `job_runs` and `job_events`. |
 
 Grafana reads Postgres through a read-only `grafana_reader` role, never the read-write `bot_admin` role. Table definitions are in the [Data model](/core/data-model).
 
@@ -63,6 +69,9 @@ Grafana reads Postgres through a read-only `grafana_reader` role, never the read
 | `trade_responses` | `POST /v1/trade/incoming/{id}/decision` | Trade response | [Incoming trades](./flows/incoming-trades.md) |
 | `trade_negotiations` | `POST /v1/trade/incoming/{id}/counter` | Trade negotiation | [Incoming trades](./flows/incoming-trades.md) |
 | `trade_evaluations`, `trade_proposals`, `llm_requests` | No scheduled producer, or the worker itself | Trade bot, async LLM | Not part of a scheduled flow |
+| `job_runs` | Job API, launcher scheduler | Launcher | [Job launcher](./job-launcher.md) |
+
+`job_events` is a topic exchange for facts such as `rumor.signal_created`; the launcher subscribes. Injury alerts from `sync_players` stay direct work items on `waiver_actions` and skip the launcher.
 
 The broker pre-declares `lineup_updates`, `waiver_actions` and `draft_targets` with dead-letter queues. Field-level contracts are in [Queue publishing](/core/queue-publishing) and [Message contracts](/worker/message-contracts).
 
@@ -76,28 +85,18 @@ The worker is not a long-running service. KEDA watches each queue's length and s
 
 Details, including acknowledgement and retry rules, are in [How bots run](/worker/how-bots-run).
 
-## What runs on a schedule?
+## What starts a job?
 
-Every CronJob uses `America/Chicago` time except the session check, which uses UTC.
+The launcher starts every job. The Tuesday jobs form the `tuesday-weekly` chain: ingest, score, refresh VORP, then optimize the lineup and waivers. Each step waits on its predecessor, or starts at its latest time.
 
-| CronJob | Schedule | Runs | Feeds |
-|---|---|---|---|
-| `fantasy-weekly-ingestor` | Tue 16:00 | `sync_league` | Rosters and league settings |
-| `fantasy-sync-actual-scores` | Tue 17:05, plus a Fri 10:00 reconcile | `sync_actual_scores` | Actual points for scoring and backtests |
-| `fantasy-draft-prep-refresher` | Daily 18:00 | `sync_projections`, `sync_kicker_dst`, `vorp_matrix` | Upcoming-week projections and VORP |
-| `fantasy-lineup-optimizer` | Tue 19:15 | `lineup_solver` | [Lineup flow](./flows/lineup.md) |
-| `fantasy-weekly-waiver-trigger` | Tue 20:30 | `waiver_evaluator` | [Waiver flow](./flows/waivers.md) |
-| `fantasy-trade-candidates`, `fantasy-trade-candidates-prescan` | Daily 07:00; Wed and Fri 12:30, before the scan | `trade_candidates` | League-wide scored trade candidates for the scan and the trade finder |
-| `fantasy-rumor-syncer` | Every 30 min | `sync_rumors` | Rumor signals |
-| `fantasy-rumor-action-trigger` | Daily 21:45 | `rumor_action_service` | Rumor-driven lineup and waiver triggers |
-| `fantasy-rapid-status-syncer` | Every 10 min, Thu, Sun and Mon | `sync_players` | Injury statuses and `waiver_actions` alerts |
-| `fantasy-stale-draft-job-sweeper` | Every 15 min | `sweep_stale_draft_jobs` | Cleans up leftover draft Jobs |
-| `rumor-digest-bot` | Daily 11:00 | `rumor_digest_bot.js` | LLM rumor digest |
-| `trade-inbox` | Every 2 h, 08:00–22:00 | `trade_inbox.js --refresh` | [Incoming trades](./flows/incoming-trades.md) |
-| `trade-scan` | Wed and Fri 13:00 | `trade_scan.js --stage` | [Outgoing trades](./flows/outgoing-trades.md) |
-| `espn-session-healthcheck` | Mon 06:00 UTC | `check_espn_session.js` | Early warning that ESPN cookies have expired |
+| Trigger | Example |
+|---|---|
+| Schedule | `rumor-syncer` every 30 minutes |
+| Chain step | `lineup-optimizer` after `projections-refresh` |
+| Event | `rumor.signal_created` starts `rumor-action-trigger` |
+| You | The Jobs page, `python -m src.cli jobs run`, or an MCP tool |
 
-The Tuesday jobs form a chain: ingest, score, refresh VORP, then optimize the lineup and waivers. Each later job starts after the earlier one's deadline.
+The generated [schedule inventory](/infra/schedules) lists every job, schedule and chain. [Job launcher](./job-launcher.md) defines the terms.
 
 ## How does code reach the cluster?
 
@@ -128,8 +127,8 @@ A config change, such as flipping `AUTO_PUBLISH_IR_MOVES`, is a reviewed PR to `
 |---|---|---|
 | Traces | OpenTelemetry to Tempo. Queue messages carry a `traceparent`, so a worker span joins the API's trace. | Follow one action across core and the worker. |
 | Logs | Loki. Worker lines carry `trackingId` and `trace_id`. | Read a bot run. See [Telemetry](/worker/telemetry). |
-| Dashboards | Grafana, provisioned from `fantasy-infra` ConfigMaps: bot decisions, execution log, draft pipeline, CronJob health, traces | Watch the system at a glance. |
-| Alerts | Grafana alert rules for failed or missed CronJobs and rumor-action outcomes | Get told when a schedule breaks. See [CronJob alerts](/infra/cronjob-alerts). |
+| Dashboards | Grafana, provisioned from `fantasy-infra` ConfigMaps: bot decisions, execution log, draft pipeline, job runs, traces | Watch the system at a glance. |
+| Alerts | Grafana alert rules on `run_log` and the launcher heartbeat, plus rumor-action outcomes | Get told when a job fails or the launcher stops. See [Job alerts](/infra/cronjob-alerts). |
 | Activity | `GET /v1/activity/actions` and the UI's Activity page | Check whether an action was delivered and verified. See [Activity submissions](/core/activity-api). |
 
 `tracking_id` is the human-facing id for one action. Look it up in Activity, then search Loki for it.
@@ -147,6 +146,7 @@ A config change, such as flipping `AUTO_PUBLISH_IR_MOVES`, is a reviewed PR to `
 ## Related
 
 - [End-to-end flows](./flows/index.md)
+- [Job launcher](./job-launcher.md)
 - [Safety model](./safety-model.md)
 - [Decision pipelines](/core/decision-pipelines)
 - [How bots run](/worker/how-bots-run)

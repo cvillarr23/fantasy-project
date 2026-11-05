@@ -21,7 +21,7 @@ Readers skim. Shape every page so they can find what they need without reading e
 | Use a list for steps, options or anything with three or more parts. | Chain items in a sentence with commas. |
 | Use a table to compare things or to list fields, flags, settings or env vars. | Describe each field in its own paragraph. |
 | Use a diagram for any flow, sequence, architecture or state machine. | Narrate a flow step by step in prose. |
-| Add a `##` heading every few paragraphs, phrased as the reader's question or task. | Use long pages with one heading. |
+| Add a `##` heading every few paragraphs. On flow and how-to pages, phrase it as the reader's question or task. On concept pages, use a noun the reader scans for, such as "Runs" or "Limits". | Use long pages with one heading. |
 | Cut filler such as "basically", "in order to", "it's worth noting that" and "simply". | Pad sentences. |
 
 Voice: use second person ("you"), present tense, active voice and short sentences. Put the condition before the instruction: "To retry a trade, run…".
@@ -45,6 +45,7 @@ Voice: use second person ("you"), present tense, active voice and short sentence
 | Type | Purpose | Shape |
 |---|---|---|
 | **Explanation** (architecture, pipelines) | How and why it works | Summary → diagram → one short section per component → "Related" links |
+| **Concept** (a subsystem's vocabulary, such as the job launcher) | Learn the terms before the flows | Summary → terms table → one noun-headed section per concept, each a definition plus a table or diagram → "Related" links. Pair it with a short flow page. |
 | **How-to** (install, deploy, rotate a cookie) | Get a task done | Prerequisites admonition → numbered steps, one action each → "Verify" step → troubleshooting table |
 | **Reference** (API, data model, queues, config) | Look something up | Table per resource or message, generated from code where possible; little or no prose |
 | **Tutorial** (first run) | Learn by doing | Numbered steps toward one visible result |
