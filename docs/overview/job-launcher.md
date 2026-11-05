@@ -95,7 +95,7 @@ stateDiagram-v2
 | Name | Format | Example |
 |---|---|---|
 | Job | Lowercase, hyphenated catalog key | `lineup-optimizer` |
-| Run id | UUID, passed to the pod as `RUN_ID` | `RUN_ID`, `RUN_TRIGGER`, `RUN_PARENT_ID` |
+| Run id | UUID. The pod receives it as `RUN_ID`, with `RUN_TRIGGER` and `RUN_PARENT_ID`. | `3f9a1c0b-7d2e-4a51-9c68-0e5b2d4f8a13` |
 | k8s Job | `<job>-<first 12 hex of run id>-a<attempt>`, trimmed to 63 characters | `lineup-optimizer-3f9a1c0b7d2e-a1` |
 | Chain step | The job name, scoped by `chain_root_id` | `tuesday-weekly` / `waiver-trigger` |
 
@@ -108,7 +108,7 @@ The pod's outermost `run_scope` adopts `RUN_ID`. Subprocesses and nested scopes 
 | `schedule` | A catalog cron slot | `job@slot` | Skipped, unless `catch_up` allows a late start |
 | `chain` | A chain step becoming ready | `job@chain_root` | Waits, up to the step's `latest` time plus 30 minutes |
 | `event` | A subscribed event | `job@key@debounce_window` | Skipped, or queued if the job sets `overlap: queue` |
-| `manual`, `cli`, `mcp` | The Jobs page, `python -m src.cli jobs run`, or the `run_job` tool | A fresh UUID | Waits up to 30 minutes |
+| `manual`, `cli`, `mcp` | The Jobs page, `python -m src.cli jobs run`, or the `run_job` tool | A fresh UUID | A busy job refuses it at once under `overlap: forbid`. A full pod cap, or `overlap: queue`, makes it wait up to 30 minutes. |
 
 A repeated dedupe key creates no second run. This is why a launcher restart can't double-fire a slot.
 
@@ -148,6 +148,8 @@ An event is a fact published to the `job_events` topic. A job subscribes with `o
 | `rumor.signal_created` | `rumor-digest-bot`, after it writes `rumor_signals` | `rumor-action-trigger`, debounce 30 minutes, `overlap: queue` |
 | `trade.offer_received` | `trade-inbox`, when a new offer arrives | No job yet |
 
+The launcher judges an event by its own time. If the launcher was down and handles an event older than its `debounce`, the event is recorded as `skipped (expired)` and starts nothing. A run an event does start expires one `debounce` after the event.
+
 An event run reads VORP from the previous evening, so a signal with no qualifying move stays held until the next settled run instead of being dropped. The schedule stays as the fallback, because a broker failure loses an event. See [Rumor actions](/core/decision-pipelines/rumor-actions) and [Queue publishing](/core/queue-publishing#how-do-events-start-runs).
 
 :::note[Injury alerts stay direct]
@@ -176,7 +178,7 @@ At most two pods run at once across all jobs.
 Grafana SQL alerts read `run_log` and route to ntfy. They fire on:
 
 - a launcher heartbeat older than 5 minutes;
-- a `failure`, `timeout` or `skipped` run on a job with `alert: warning` or `critical`, except paused jobs and the overlap or expired skips of event runs;
+- a `failure`, `timeout` or `skipped` run on a job with `alert: warning` or `critical`. Skips from a pause, a chain step that never started, a chain timeout or a chain that already ended stay quiet, and so do the `overlap` and `expired` skips of event runs on a job that also has a schedule or a chain step. A job that only has `on_event` still alerts on those, since nothing else would run it;
 - any message in `job_runs.dlq`;
 - a chain past its `max_duration`.
 

@@ -78,7 +78,7 @@ flowchart LR
     sched -->|"debounce 30 min"| run["rumor-action-trigger run"]
 ```
 
-Events within one 30-minute window share a dedupe key, so they start one run. If a run is already in flight, `overlap: queue` waits for it instead of skipping. The 21:45 schedule still fires if the broker loses an event.
+Events within one 30-minute window share a dedupe key, so they start one run. If a run is already in flight, `overlap: queue` waits for it instead of skipping. The 21:45 schedule still fires if the broker loses an event. If the launcher was down, it handles queued events on restart. An event older than its 30-minute `debounce` ends `skipped (expired)` and starts nothing, so only recent events start a run.
 
 ## Related
 
