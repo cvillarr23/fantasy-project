@@ -347,7 +347,7 @@ variables:
     secret: false
     description: Run log row the job adopts, so a launched run and its log entry match.
   - name: RUN_ATTEMPT
-    repos: [core]
+    repos: [core, worker]
     default: null
     required: "no"
     secret: false
@@ -955,6 +955,18 @@ variables:
     required: "yes"
     secret: true
     description: Domain the session cookie is set for. Production keeps it in OpenBao.
+  - name: GRAFANA_URL
+    repos: [ui]
+    default: "empty (the web-ui image sets it to nothing)"
+    required: "no"
+    secret: false
+    description: Grafana base URL. The run detail page uses it to link to a run's logs. nginx serves it to the app at runtime in /ui-config.json.
+  - name: ARGOCD_SSH_DATA_PATH
+    repos: [platform]
+    default: null
+    required: "no"
+    secret: false
+    description: Directory where the Image Updater looks for ssh_known_hosts when it commits over SSH. The deployment sets /app/ssh, because the default sits in a read-only ConfigMap.
   - name: ARGOCD_IMAGE_UPDATER_KUSTOMIZE_V5
     repos: [platform]
     default: null
