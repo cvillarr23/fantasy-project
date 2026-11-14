@@ -35,7 +35,7 @@ sequenceDiagram
 
 | Trigger | Path |
 |---|---|
-| `fantasy-lineup-optimizer` CronJob, Tuesday 19:15 Chicago | `python -m src.optimization.lineup_solver` calls `POST /v1/trigger/lineup` |
+| `lineup-optimizer` launcher job, a `tuesday-weekly` chain step that starts by 19:15 Chicago | `python -m src.optimization.lineup_solver` calls `POST /v1/trigger/lineup` |
 | Lineup page in the UI | nginx adds `X-API-Key` and forwards to the same route. The UI sends a random idempotency key per submission. |
 | Rumor actions | `bench_watch` signals call the same route. See [Rumor actions](/core/decision-pipelines/rumor-actions). |
 
@@ -45,7 +45,7 @@ sequenceDiagram
 |---|---|
 | Queue | `lineup_updates`, broker-declared, dead-letters to `lineup_updates.dlq` |
 | Tables | `weekly_stats`, `league_rosters` (inputs); `activity_actions`, `activity_outbox`, `activity_events`, `bot_decisions`, `execution_log` (record) |
-| Idempotency key | `lineup-<team>-<hash>`: SHA-256 of the CronJob's Job name, team, season and week, and the sorted swaps. Released 30 min after the action finishes. |
+| Idempotency key | `lineup-<team>-<hash>`: SHA-256 of the run's `JOB_NAME`, team, season and week, and the sorted swaps. `JOB_NAME` stays the same across a run's attempts. Released 30 min after the action finishes. |
 | Worker claim | `activity.claim(tracking_id)` under a Postgres advisory lock |
 | ESPN write | `POST …/transactions/` with `type: "ROSTER"`, one `LINEUP` item per move |
 | Verification | Every moved player sits in its intended slot on a fresh roster read |

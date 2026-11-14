@@ -67,8 +67,8 @@ sequenceDiagram
 
 | Trigger | Path |
 |---|---|
-| `fantasy-weekly-waiver-trigger` CronJob, Tuesday 20:30 Chicago | `python -m src.optimization.waiver_evaluator` |
-| `fantasy-rumor-action-trigger` CronJob, daily 21:45 Chicago | `boost_waiver_priority` signals. See [Rumor actions](/core/decision-pipelines/rumor-actions). |
+| `waiver-trigger` launcher job, a `tuesday-weekly` chain step that starts by 20:30 Chicago | `python -m src.optimization.waiver_evaluator` |
+| `rumor-action-trigger` launcher job, on each `rumor.signal_created` event and daily at 21:45 Chicago | `boost_waiver_priority` signals. See [Rumor actions](/core/decision-pipelines/rumor-actions). |
 | Waivers and Move overview pages in the UI | `POST /v1/trigger/waiver` through nginx |
 | `fantasy-rapid-status-syncer` | Publishes `INJURY_STATUS_CHANGE` alerts straight to `waiver_actions`. These are alerts, not claims, and carry Sleeper ids. |
 

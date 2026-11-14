@@ -16,7 +16,7 @@ Three settings identify your team. Set them in each place that reads them.
 |---|---|---|---|
 | League ID | `ESPN_LEAGUE_ID` | `fantasy/deployment` in the secret store, as `ESPN_LEAGUE_ID` | **Settings** page |
 | Team ID | `ESPN_TEAM_ID` | `fantasy/deployment`, as `ESPN_TEAM_ID` | **Settings** page |
-| Season | `CURRENT_YEAR` | `fantasy-league-config` ConfigMap, plus the `--season` arguments in two CronJobs | **Settings** page |
+| Season | `CURRENT_YEAR` | `fantasy-league-config` ConfigMap, which the job catalog passes to `--season` as `$(CURRENT_YEAR)` | **Settings** page |
 
 Both IDs are in your team's ESPN URL: `…/team?leagueId=<league>&teamId=<team>`. The deployment treats them as private and keeps them out of Git.
 
