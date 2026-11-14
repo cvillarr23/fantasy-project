@@ -22,6 +22,7 @@ One launcher starts every job in the system: ingestion, solvers and the schedule
 | Catalog | The `fantasy-job-catalog` ConfigMap that lists every job and chain. |
 | Trigger | What asked for a run: `schedule`, `chain`, `event`, `manual`, `cli` or `mcp`. |
 | Chain | A named workflow of job steps with dependencies, such as `tuesday-weekly`. |
+| Fan-out | A run split into parallel child runs, one per value of a job param. |
 | Event | A fact, such as `rumor.signal_created`, that can start runs. |
 
 ## Components
@@ -42,8 +43,8 @@ The launcher is one process, `python -m src.launcher` in the core image, with on
 
 | Part | Does |
 |---|---|
-| Scheduler | Fires schedules and chain steps, applies pauses, and turns events into runs. |
-| Consumer | Takes run commands, drops duplicates, enforces overlap and the pod cap, and creates the k8s Job. |
+| Scheduler | Fires schedules and chain steps, publishes fan-out children, applies pauses, and turns events into runs. |
+| Consumer | Takes run commands, drops duplicates, enforces overlap and the pod cap, and creates the k8s Job. It claims a fan-out parent without launching anything. |
 | Watcher | Finalizes runs, retries failures, and enforces start and run timeouts and cancellation. |
 | Inline runner | Runs tiny jobs in the launcher process instead of a pod. No catalog job uses it yet. |
 
@@ -64,13 +65,14 @@ The catalog lives in `fantasy-infra` as `base/launcher/catalog.yaml`. Core valid
 | `alert` | Severity of the Grafana alert on a failed run: `warning` or `critical`. |
 | `schedules` | Cron expressions with a time zone and a `catch_up` window. |
 | `on_event` | Event keys that start the job, each with a `debounce`. |
+| `fan_out` | `{param, values}`: split each run into one child per value. See [Fan-out](#fan-out). |
 
 The generated [schedule inventory](/infra/schedules) lists every job, its schedule and its command.
 
 <details>
 <summary>What does the catalog reserve for later?</summary>
 
-`class: service`, `group`, `fan_out` and `approval` parse but are rejected until implemented. The [ADR](/infra/adr/unified-job-launcher) lists them under v2.
+`class: service`, `group` and `approval` parse but are rejected until implemented. The [ADR](/infra/adr/unified-job-launcher) lists them under v2.
 
 </details>
 
@@ -139,6 +141,29 @@ flowchart LR
 
 The generated [chain diagrams](/infra/schedules) always match the catalog. Use them, not this page, for the current order.
 
+## Fan-out
+
+A job with `fan_out: {param, values}` splits each run that leaves `param` unset into one child run per value. The run that leaves it unset is the parent. `projections-refresh` uses `fan_out: {param: week_offset, values: [0, 1, 2, 3]}`, so each week of the horizon refreshes in its own pod.
+
+```mermaid
+flowchart LR
+    P["projections-refresh<br/>parent, executor fan_out"] --> C0["child<br/>week_offset=0"]
+    P --> C1["child<br/>week_offset=1"]
+    P --> C2["child<br/>week_offset=2"]
+    P --> C3["child<br/>week_offset=3"]
+```
+
+| Part | Rule |
+|---|---|
+| Parent | The consumer claims it with executor `fan_out` and launches nothing, so it takes no pod slot. It is never retried. |
+| Children | The scheduler publishes one per value. Each gets the parent's params plus `param=value`, the parent's trigger and chain root, and the parent as `parent_run_id`. |
+| Child dedupe key | `job@<parent run id>#param=value` |
+| Running | Children are ordinary runs. The pod cap bounds how many run at once, and each retries by `max_attempts`. |
+| Parent result | `success` once no child is pending, or `failure` with reason `fan_out_failed` if any child didn't succeed. |
+| Ended parent | A child still queued after its parent ended, such as after a cancel, is `skipped` with reason `fan_out_ended`. Cancelling a parent cancels its queued and running children. |
+| In a chain | The parent is the step, so its status decides the edges after it. |
+| Param set | A run that sets `param` itself, such as a manual `week_offset=2`, is one ordinary run. |
+
 ## Events
 
 An event is a fact published to the `job_events` topic. A job subscribes with `on_event` and a `debounce`, and the launcher turns each matching event into a run.
@@ -178,7 +203,7 @@ At most two pods run at once across all jobs.
 Grafana SQL alerts read `run_log` and route to ntfy. They fire on:
 
 - a launcher heartbeat older than 5 minutes;
-- a `failure`, `timeout` or `skipped` run on a job with `alert: warning` or `critical`. Skips from a pause, a chain step that never started, a chain timeout or a chain that already ended stay quiet, and so do the `overlap` and `expired` skips of event runs on a job that also has a schedule or a chain step. A job that only has `on_event` still alerts on those, since nothing else would run it;
+- a `failure`, `timeout` or `skipped` run on a job with `alert: warning` or `critical`. Skips from a pause, a chain step that never started, a chain timeout, a chain that already ended or a fan-out that already ended stay quiet. So does a fan-out parent's `fan_out_failed`, since the failed child alerts on its own row, and so do the `overlap` and `expired` skips of event runs on a job that also has a schedule or a chain step. A job that only has `on_event` still alerts on those, since nothing else would run it;
 - any message in `job_runs.dlq`;
 - a chain past its `max_duration`.
 
