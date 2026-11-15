@@ -54,12 +54,12 @@ done
 
 ## How do I pause the jobs that act?
 
-Three scheduled jobs queue ESPN changes: the lineup optimizer, the waiver trigger and the rumor action trigger. How you pause them depends on what schedules them.
+Three scheduled jobs queue ESPN changes: the lineup optimizer, the waiver trigger and the rumor action trigger. Pause them in the [job launcher](/overview/job-launcher), from the Jobs page, the CLI or the API.
 
-| Scheduler | Pause | Resume |
+| Interface | Pause | Resume |
 |---|---|---|
-| CronJobs, as fantasy-infra deploys today | `kubectl patch cronjob <name> -p '{"spec":{"suspend":true}}'` for `fantasy-lineup-optimizer`, `fantasy-weekly-waiver-trigger` and `fantasy-rumor-action-trigger` | The same patch with `false` |
-| The core job launcher, which [replaces the CronJobs](/infra/adr/unified-job-launcher) | `PUT /v1/jobs/<name>/pause` for `lineup-optimizer`, `waiver-trigger` and `rumor-action-trigger`, the catalog jobs marked `acts: true` | `DELETE /v1/jobs/<name>/pause` |
+| API | `PUT /v1/jobs/<name>/pause` for `lineup-optimizer`, `waiver-trigger` and `rumor-action-trigger` | `DELETE /v1/jobs/<name>/pause` |
+| CLI | `python -m src.cli jobs pause <name> --reason <why>` | `python -m src.cli jobs resume <name>` |
 
 A launcher pause with no `until` lasts until you remove it:
 

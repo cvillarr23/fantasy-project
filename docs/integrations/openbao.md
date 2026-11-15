@@ -32,8 +32,8 @@ A few Secrets are composed by templates, such as the broker connection URL and t
 | Category | Used by |
 |---|---|
 | ESPN session cookies | Core API and ingestion, browser worker, session healthcheck |
-| Database credentials, read-write and read-only | Postgres, API, CronJobs, worker, Grafana datasource |
-| RabbitMQ credentials | Broker, API, worker, CronJobs, KEDA |
+| Database credentials, read-write and read-only | Postgres, API, job launcher, launcher jobs, worker, Grafana datasource |
+| RabbitMQ credentials | Broker, API, job launcher, launcher jobs, worker, KEDA |
 | LLM provider keys | Core API (chat), rumor digest |
 | Trigger API key | API, web UI, scheduled action callers |
 | OIDC proxy credentials | oauth2-proxy |
@@ -44,7 +44,7 @@ The ESPN cookies are your own session credentials. See [ESPN Fantasy](./espn.md#
 ## How does refresh work?
 
 - **Delay.** A changed value reaches the cluster within an hour of the OpenBao write.
-- **Running pods.** Environment variables are read at container start. Restart a long-lived pod to pick up a change. CronJob and worker Jobs pick it up on their next run.
+- **Running pods.** Environment variables are read at container start. Restart a long-lived pod to pick up a change. Launcher jobs and worker Jobs pick it up on their next run.
 - **ESPN cookies.** Renewal is manual because ESPN's login can't be automated. The Monday healthcheck warns when they've expired, but they can expire mid-week. Refresh them before a draft.
 
 ## What fails when OpenBao does?

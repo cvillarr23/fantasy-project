@@ -68,7 +68,7 @@ ESPN identifies you by two cookies, `espn_s2` and `SWID`. They're your own sessi
 
 - **No scripted login.** ESPN's login page is protected against automation. A person logs in, and the credentials are stored in [OpenBao](./openbao.md).
 - **Manual renewal.** Cookies expire without warning. Renewing them is a manual step, described in [Session and auth](/worker/espn/session-and-auth#when-cookies-expire).
-- **Early warning.** The `espn-session-healthcheck` CronJob runs Mondays at 06:00 UTC and fails when the roster page stops rendering.
+- **Early warning.** The `espn-session-healthcheck` launcher job runs Mondays at 06:00 UTC and fails when the roster page stops rendering.
 
 ## What can go wrong?
 

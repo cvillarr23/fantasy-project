@@ -60,7 +60,7 @@ stateDiagram-v2
 
 | Item | Value |
 |---|---|
-| Trigger | `trade-scan` CronJob, Wednesday and Friday 13:00 Chicago. Regular-season weeks 1–18 only. |
+| Trigger | `trade-scan` launcher job, Wednesday and Friday 13:00 Chicago. Regular-season weeks 1–18 only. |
 | Queue | `trade_submissions`. The approve route publishes directly, without the outbox. |
 | Tables | `execution_log` (scan claim, staged offer with `proposal-evaluation-v1` evidence, submit claim); `bot_decisions` (approval audit) |
 | Scan key | One attempt per league, team and Chicago calendar date, under an advisory lock. There are no automatic retries, because a new pitch would need a new approval. |

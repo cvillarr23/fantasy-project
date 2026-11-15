@@ -7,7 +7,7 @@ sidebar_position: 4
 fantasy-infra's manifests were written for one homelab cluster. This page lists what they assume, what you replace on your own cluster, and the order to bring it up in. Run the stack [locally](./local-development.mdx) first, so you know your league and cookies work.
 
 :::info[Prerequisites]
-- Kubernetes 1.27 or later (the CronJobs use `timeZone`), with a **default StorageClass** that can provision ReadWriteOnce volumes.
+- Kubernetes 1.27 or later, with a **default StorageClass** that can provision ReadWriteOnce volumes.
 - `kubectl` with Kustomize (`kubectl kustomize`).
 - Cluster-admin rights to install Argo CD, KEDA and External Secrets Operator.
 - A Google OAuth client and a domain you can point at the cluster with TLS.
@@ -40,8 +40,8 @@ Change these in your fork before the first sync.
 | Pinned UI ClusterIP `10.152.183.104` | `base/web-ui/service.yaml` | Remove `clusterIP`; it exists only for the homelab's Cloudflare tunnel |
 | Tailscale ingresses | `base/web-ui/ingress.yaml`, `base/databases/rabbitmq-ingress.yaml` | Remove them, or install the Tailscale operator |
 | ntfy server and UI URLs | `base/browser-worker/notify-config.yaml` | Your own ntfy server and public UI URL, or leave `fantasy/ntfy` unset and nothing is sent ([ntfy](/integrations/ntfy)) |
-| `CURRENT_YEAR` and `--season 2026` | `overlays/production/configmap-env.yaml`; the weekly and actual-scores CronJob commands | The season you play |
-| `America/Chicago` | Every CronJob's `timeZone` | Your time zone, if you want different local times. ESPN's deadlines don't move. |
+| `CURRENT_YEAR` | `overlays/production/configmap-env.yaml`. The job catalog passes it to `--season` as `$(CURRENT_YEAR)`. | The season you play |
+| `America/Chicago` | Every schedule's `tz` in the job catalog, `base/launcher/catalog.yaml` | Your time zone, if you want different local times. ESPN's deadlines don't move. |
 | Image digests | `images:` in `overlays/production/kustomization.yaml` | Current digests, or your own images |
 
 ## Deploy
@@ -120,15 +120,18 @@ Apply it with `kubectl apply -f fantasy-infra-application.yaml`. For draft day, 
 
 ### 6. Bring the data up
 
-The API creates the schema when it starts. The CronJobs then ingest on their schedule ([Schedules](/infra/schedules)). Two ingestors have no schedule, so run them once, along with a first refresh, instead of waiting for the next one:
+The API creates the schema when it starts. The [job launcher](/overview/job-launcher) then runs the ingestion jobs on their schedule ([Schedules](/infra/schedules)). Two ingestors have no schedule, so run them once, along with a first league ingest and refresh, instead of waiting for the next one:
 
 ```bash
 kubectl exec deploy/fantasy-core-pipeline -- python -m src.ingestion.sync_players --force
 kubectl exec deploy/fantasy-core-pipeline -- python -m src.ingestion.sync_id_crosswalk
-kubectl create job --from=cronjob/fantasy-weekly-ingestor first-ingest
+kubectl exec deploy/fantasy-core-pipeline -- python -m src.cli jobs run sync-league
+kubectl exec deploy/fantasy-core-pipeline -- python -m src.cli jobs run metrics-extractor
 kubectl exec deploy/fantasy-core-pipeline -- python -m src.ingestion.sync_skill_position_crosswalk --season <season>
-kubectl create job --from=cronjob/fantasy-draft-prep-refresher first-refresh
+kubectl exec deploy/fantasy-core-pipeline -- python -m src.cli jobs run projections-refresh
 ```
+
+Each `jobs run` returns once the run is queued and prints its run id. Wait until `python -m src.cli jobs status <run_id>` shows `success` before the next command.
 
 For the draft room and trade builder, save a browser session with the remote login Job; see [Refreshing the login remotely](/worker/espn/session-and-auth#refreshing-the-login-remotely). It writes `fantasy/espn-session-state` for you.
 
@@ -139,7 +142,7 @@ For the draft room and trade builder, save a browser session with the remote log
 | `kubectl get externalsecrets` | Every row `SecretSynced` |
 | `kubectl get pods` | The API, UI, oauth2-proxy, Postgres, Redis and RabbitMQ `Running` |
 | `kubectl port-forward svc/fantasy-core-pipeline 8000:8000`, then `curl localhost:8000/v1/health` | `"database":"connected","broker":"connected"` |
-| `kubectl create job --from=cronjob/espn-session-healthcheck espn-check` | The Job completes. A failure means the cookies or IDs are wrong. |
+| `kubectl exec deploy/fantasy-core-pipeline -- python -m src.cli jobs run espn-session-healthcheck`, then `jobs status <run_id>` | The run ends `success`. A failure means the cookies or IDs are wrong. |
 | Your public URL | Google sign-in, then the UI. Save your league on **Settings**. |
 
 ## Troubleshooting

@@ -339,7 +339,7 @@ variables:
     secret: false
     description: Read by the OpenTelemetry SDKs; production sets http/protobuf for core and grpc for the worker.
 
-  # Run identity (set by the job launcher or the CronJobs; don't set by hand)
+  # Run identity (set by the job launcher; don't set by hand)
   - name: RUN_ID
     repos: [core, worker]
     default: null
@@ -357,7 +357,7 @@ variables:
     default: null
     required: "no"
     secret: false
-    description: What started the run, such as schedule, manual or downstream.
+    description: What started the run, such as schedule, chain, event, manual, cli or mcp.
   - name: RUN_PARENT_ID
     repos: [core, worker]
     default: null
@@ -369,7 +369,7 @@ variables:
     default: null
     required: "no"
     secret: false
-    description: Name of the CronJob that started the run.
+    description: Legacy. Name of the CronJob that started the run, read only when RUN_TRIGGER is unset. The launcher doesn't set it.
   - name: RUN_K8S_JOB
     repos: [core, worker]
     default: falls back to HOSTNAME
