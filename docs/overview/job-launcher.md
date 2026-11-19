@@ -60,19 +60,23 @@ The catalog lives in `fantasy-infra` as `base/launcher/catalog.yaml`. Core valid
 | `params` | The allowlist of parameters an on-demand run may set, such as `week` or `dry_run`. |
 | `overlap` | `forbid` refuses a second concurrent run. `queue` waits for the first to finish. |
 | `max_attempts` | Launcher-owned retries. Kubernetes `backoffLimit` is always 0. |
-| `deadline` | How long a run may execute. Capped at 2 hours. |
+| `deadline` | How long a run may execute. Capped at 2 hours, or 8 hours for a `class: service` job. |
 | `acts` | The job writes to ESPN. The UI asks for confirmation, and you can pause it. |
 | `alert` | Severity of the Grafana alert on a failed run: `warning` or `critical`. |
 | `schedules` | Cron expressions with a time zone and a `catch_up` window. |
 | `on_event` | Event keys that start the job, each with a `debounce`. |
 | `fan_out` | `{param, values}`: split each run into one child per value. See [Fan-out](#fan-out). |
+| `class` | `batch` (default) or `service`, a run that lasts hours. See [Service jobs](#service-jobs). |
+| `param_env` | Params passed to the pod as env vars instead of CLI flags, such as `room_url: DRAFT_ROOM_URL`. |
+| `health` | `{key, grace}`, service jobs only: a Redis heartbeat key built from the run's params. See [Service jobs](#service-jobs). |
+| `group` | A concurrency group from the catalog's `groups`, which caps how many of its jobs run at once. A full group makes runs wait. |
 
 The generated [schedule inventory](/infra/schedules) lists every job, its schedule and its command.
 
 <details>
 <summary>What does the catalog reserve for later?</summary>
 
-`class: service`, `group` and `approval` parse but are rejected until implemented. The [ADR](/infra/adr/unified-job-launcher) lists them under v2.
+`approval` parses but is rejected until implemented. The [ADR](/infra/adr/unified-job-launcher) lists them under v2.
 
 </details>
 
@@ -164,6 +168,20 @@ flowchart LR
 | In a chain | The parent is the step, so its status decides the edges after it. |
 | Param set | A run that sets `param` itself, such as a manual `week_offset=2`, is one ordinary run. |
 
+## Service jobs
+
+A `class: service` job runs for hours, not minutes. The four draft jobs use it: `draft-listener` and `draft-connector` for the live draft, and `practice-draft-listener` and `practice-draft-connector` for a practice room. The draft endpoints request and cancel their runs; the API itself can only read k8s Jobs.
+
+| Rule | Service job |
+|---|---|
+| Pod cap | Never waits on it and doesn't count toward it |
+| Deadline | Capped by `max_service_deadline`, 8 hours |
+| Executor | Pod only, and no fan-out |
+| Stopping | 5-second termination grace. The watcher checks for cancelled runs every 5 seconds, so a stop doesn't wait for the 60-second pass. |
+| Health | With `health`, the watcher ends a `running` run whose Redis key has been missing past `grace` as `timeout`, reason `unhealthy`. A Redis error leaves the run alone. |
+
+The practice jobs watch the connector's `draft:{league_id}:health` heartbeat with a 10-minute grace, so an abandoned practice room ends on its own. The live jobs have no health key: only `/v1/draft/stop` or the deadline ends them.
+
 ## Events
 
 An event is a fact published to the `job_events` topic. A job subscribes with `on_event` and a `debounce`, and the launcher turns each matching event into a run.
@@ -190,13 +208,14 @@ Every stage has a hard limit, and every limit ends in a `run_log` status.
 | Waiting in `job_runs` | 6-hour message TTL | RabbitMQ | Dead-letter queue, alert |
 | Queued, pod cap full | Manual 30 min. Schedule: `catch_up`. Chain: `latest` plus 30 min. | Consumer | `skipped`, reason `expired` |
 | Pod pending | 10 min | Watcher | `failure`, reason `start_timeout`. The k8s Job is deleted. |
-| Running | Job `deadline`, at most 2 hours | `activeDeadlineSeconds` and watcher | `timeout` |
+| Running | Job `deadline`, at most 2 hours, or 8 for a service job | `activeDeadlineSeconds` and watcher | `timeout` |
+| Service heartbeat | `health.grace` after the key goes missing | Watcher | `timeout`, reason `unhealthy` |
 | Lost track | Deadline plus 10 min, checked every minute | Watcher | `timeout`, reason `orphaned` |
 | Inline run | Same deadline. SIGTERM, then SIGKILL after 30 s. | Inline runner | `timeout` |
 | Whole chain | `max_duration` | Scheduler | Remaining steps `skipped` |
 | Finished k8s Job | 1 day | Kubernetes TTL | Removed |
 
-At most two pods run at once across all jobs.
+At most two pods run at once across all jobs, counting the KEDA browser worker's Jobs. Service jobs are outside this cap.
 
 ## Monitoring
 
