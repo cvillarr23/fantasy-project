@@ -4,7 +4,7 @@ description: How a trade scan stages a proposal, and how a human approval turns 
 sidebar_position: 4
 ---
 
-Every day, the core `trade_candidates` job enumerates and scores every 1-for-1, 2-for-1 and 1-for-2 trade across the league. It runs again just before each scan. Twice a week the trade scan takes the best proposable candidates, up to three per team, re-scores each one live, and stages the best as unsent offers. When the candidate set is missing, empty, malformed or more than 36 hours old, the scan falls back to asking an LLM for packages. In both cases the LLM writes the pitch from score evidence, and nothing goes to the other manager until you approve that exact offer. The Trades page browses the same candidate set in its trade finder.
+Every day, the core `trade_candidates` job enumerates and scores every 1-for-1, 2-for-1 and 1-for-2 trade across the league. It runs again just before each scan. Twice a week the trade scan takes the best proposable candidates, up to three per team, re-scores each one live, and stages the best as unsent offers. When the candidate set is missing, empty, malformed or more than 36 hours old, the scan falls back to asking an LLM for packages. In both cases the LLM writes the pitch from score evidence, and nothing goes to the other manager until you approve that exact offer. A scan that finishes without error dismisses every proposal an earlier scan staged that you haven't approved, so the list only ever shows the latest batch. You can also dismiss one yourself from its card. The Trades page browses the same candidate set in its trade finder.
 
 ```mermaid
 sequenceDiagram
@@ -28,7 +28,11 @@ sequenceDiagram
     W->>L: pitch from score evidence
     W->>E: fill Propose Trade form, no send
     W->>DB: staged offer: awaiting_approval, offer_key
+    W->>DB: dismiss earlier scans' unapproved proposals
     U->>API: GET /v1/trade/offers
+    opt you dismiss it instead
+        U->>API: POST /v1/trade/offers/{offer_key}/dismiss
+    end
     U->>API: POST /v1/trade/offers/{offer_key}/approve
     API->>DB: lock, claim approval_pending + bot_decisions
     API->>MQ: publish (approval.offer_key)
