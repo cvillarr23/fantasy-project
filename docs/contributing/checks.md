@@ -17,7 +17,7 @@ For a bug fix, add a test that fails for the reported reason. For a feature, add
 | fantasy-core-pipeline | `main` | Python 3.11 | `black --check .` · `mypy src/` · `DB_PASSWORD=test pytest tests/ -v` |
 | fantasy-browser-worker | `main` | Node 20 | `npm ci` · `npm run lint` · `npm test` |
 | fantasy-web-ui | `master` | Node 22 | `npm ci` · `npm run lint` · `npx tsc -b --noEmit` · `npm test` · `npm run build` |
-| fantasy-infra | `main` | `kubectl`, Helm 3, Python 3 | `kubectl kustomize overlays/production/` · `helm lint charts/fantasy` · `python3 scripts/compare-renders.py` · `python3 -m unittest tests.test_chart` · `kubectl kustomize overlays/draft-day/` · `./scripts/preflight-draft-sync-env.sh` · `python3 scripts/generate-schedules.py --check` · `./tests/launcher_alerts/run.sh` |
+| fantasy-infra | `main` | `kubectl`, Helm 3, Python 3 | `kubectl kustomize overlays/production/` · `helm lint charts/fantasy` · `python3 scripts/compare-renders.py` · `python3 -m unittest tests.test_chart` · `kubectl kustomize overlays/draft-day/` · `python3 scripts/generate-schedules.py --check` · `./tests/launcher_alerts/run.sh` |
 | fantasy-project | `main` | Node (see `.nvmrc`) | `npm ci` · `npm run test:actions` · `npm run build` |
 
 :::note[What blocks a merge]
