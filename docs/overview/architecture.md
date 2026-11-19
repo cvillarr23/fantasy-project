@@ -115,7 +115,7 @@ flowchart LR
 | Build | Each service repo's CI pushes an image to GitHub Container Registry. |
 | Image Updater | Watches GHCR and commits each new digest to the `images:` list in `overlays/production/kustomization.yaml`, as `chore(images): update … [argocd-image-updater]`. |
 | Argo CD | Syncs `overlays/production` automatically on every push. There's no manual `kubectl apply`. |
-| Draft Jobs | Core spawns draft Jobs at runtime from `DRAFT_SYNC_IMAGE` and `BROWSER_WORKER_IMAGE`. Kustomize copies both from the pinned Deployment and ScaledJob images, so they update together. |
+| Draft Jobs | The draft API asks the job launcher to start the draft listener and room connector, which are service jobs in the job catalog. They run from the same pinned `CORE_IMAGE` and `WORKER_IMAGE` as every other launched job. |
 | Secrets | External Secrets materializes ESPN cookies, database passwords and API keys from OpenBao. No credential is committed. |
 | Draft day | The `overlays/draft-day` overlay adds CPU and memory headroom and a warm worker. |
 

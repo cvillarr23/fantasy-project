@@ -376,6 +376,12 @@ variables:
     required: "no"
     secret: false
     description: Name of the Kubernetes Job that started the run.
+  - name: RUN_EXECUTOR
+    repos: [core]
+    default: null
+    required: "no"
+    secret: false
+    description: How the launcher ran the job. inline means it ran in the launcher's own pod, so resource usage comes from the process rather than the pod's cgroup.
   - name: JOB_NAME
     repos: [core]
     default: null
@@ -404,42 +410,6 @@ variables:
     required: "no"
     secret: false
     description: Namespace the API and launcher create Jobs in.
-  - name: DRAFT_SYNC_IMAGE
-    repos: [core]
-    default: null
-    required: yes, for drafts (POST /v1/draft/start returns 500 without it)
-    secret: false
-    description: Core image the API runs draft listener Jobs from.
-  - name: BROWSER_WORKER_IMAGE
-    repos: [core]
-    default: null
-    required: yes, for drafts
-    secret: false
-    description: Worker image the API runs draft clicker Jobs from.
-  - name: DRAFT_SYNC_ENV_SECRET
-    repos: [core]
-    default: null
-    required: yes, for drafts
-    secret: false
-    description: Name of the Secret holding the ESPN cookies and IDs that draft Jobs load.
-  - name: DRAFT_SYNC_ENV_CONFIGMAP
-    repos: [core]
-    default: null
-    required: yes, for drafts
-    secret: false
-    description: Name of the ConfigMap holding league settings that draft Jobs load.
-  - name: DRAFT_SYNC_DB_SECRET_NAME
-    repos: [core]
-    default: database-credentials
-    required: "no"
-    secret: false
-    description: Secret holding the Postgres password for draft Jobs.
-  - name: DRAFT_SYNC_DB_SECRET_KEY
-    repos: [core]
-    default: postgres-password
-    required: "no"
-    secret: false
-    description: Key within that Secret.
 
   # Core: drafts
   - name: DRAFT_PICK_CLOCK_SECONDS_LIVE
@@ -567,6 +537,12 @@ variables:
     secret: false
     description: Weights VORP by opponent defense strength. Only the exact string true enables it.
     docs: /integrations/nflverse
+  - name: ESPN_MARKET_WEIGHT
+    repos: [core]
+    default: "0.0"
+    required: "no"
+    secret: false
+    description: Weight of ESPN's percent-started percentile in the VORP score. 0.0 skips the step; fantasy-infra sets 0.2.
   - name: RUMOR_ACTION_CONFIDENCE_THRESHOLD
     repos: [core]
     default: "0.75"
