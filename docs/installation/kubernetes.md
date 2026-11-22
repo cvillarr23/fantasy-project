@@ -187,7 +187,6 @@ With this setup, the Secrets from [step 2](#2-create-the-secrets) must exist bef
 
 | Limit | Effect | Workaround |
 |---|---|---|
-| The fantasy-web-ui image hardcodes the homelab's DNS resolver (`resolver 10.152.183.152` in `nginx.conf.template`) | The UI loads, but every `/v1` call fails with 502 | Rebuild the UI image with your cluster DNS Service IP (`kubectl -n kube-system get svc kube-dns`) |
 | Pods the launcher starts don't get `K8S_NAMESPACE` or `CORE_PIPELINE_URL` | Outside the `default` namespace, `stale-draft-job-sweeper` fails with a 403, and the trade bots can't reach the core API | Install into `default` if you need them now |
 
 ## Troubleshooting
@@ -197,7 +196,7 @@ With this setup, the Secrets from [step 2](#2-create-the-secrets) must exist bef
 | `helm install` fails with `additional properties '…' not allowed` | A values key is misspelled or unknown. The chart README lists the valid ones. |
 | A pod is stuck in `CreateContainerConfigError` | A required Secret or key from [step 2](#2-create-the-secrets) is missing. `kubectl describe pod` names it. |
 | RabbitMQ never gets ready | The broker's startup probe checks `rabbitmq-user` and `rabbitmq-password`. Recreate `rabbitmq-credentials`, with the same user and password in `amqp-url`. |
-| The UI loads, but every `/v1` call fails with 502 | The UI's nginx can't resolve the API. See [Known limits](#known-limits). |
+| The UI loads, but every `/v1` call fails with 502 | The UI's nginx can't resolve the API. It uses the first `nameserver` in the container's `/etc/resolv.conf` unless `NGINX_RESOLVER` is set. Check that `CORE_API_UPSTREAM` names a Service that exists. |
 | Google sign-in loops or rejects you | `redirect-url` must match the OAuth client exactly, `cookie-domain` must match your host, and your email must be on the list. |
 | Worker pods never start | KEDA isn't installed, or `rabbitmq-trigger-auth` can't read `amqp-url` from `rabbitmq-credentials`. |
 

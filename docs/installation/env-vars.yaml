@@ -76,6 +76,12 @@ variables:
     required: yes, outside the cluster
     secret: false
     description: host:port that the UI container's nginx proxies /v1/ to.
+  - name: NGINX_RESOLVER
+    repos: [ui]
+    default: first nameserver in the container's /etc/resolv.conf (the cluster DNS Service in Kubernetes)
+    required: "no"
+    secret: false
+    description: DNS server the UI container's nginx uses to resolve CORE_API_UPSTREAM.
   - name: VITE_API_PROXY_TARGET
     repos: [ui]
     default: http://localhost:8000
