@@ -187,7 +187,6 @@ With this setup, the Secrets from [step 2](#2-create-the-secrets) must exist bef
 
 | Limit | Effect | Workaround |
 |---|---|---|
-| Pods the launcher starts don't get `K8S_NAMESPACE` or `CORE_PIPELINE_URL` | Outside the `default` namespace, `stale-draft-job-sweeper` fails with a 403, and the trade bots can't reach the core API | Install into `default` if you need them now |
 
 ## Troubleshooting
 
