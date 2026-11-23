@@ -549,6 +549,12 @@ variables:
     required: "no"
     secret: false
     description: Weight of ESPN's percent-started percentile in the VORP score. 0.0 skips the step; fantasy-infra sets 0.2.
+  - name: NEWS_BLUESKY_HANDLES
+    repos: [core]
+    default: "empty (the Bluesky source is skipped)"
+    required: "no"
+    secret: false
+    description: Comma-separated Bluesky handles whose original posts the rumor syncer stores as display-only player news. fantasy-infra reads it from the public league ConfigMap.
   - name: RUMOR_ACTION_CONFIDENCE_THRESHOLD
     repos: [core]
     default: "0.75"

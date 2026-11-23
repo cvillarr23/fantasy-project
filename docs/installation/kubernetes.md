@@ -185,8 +185,7 @@ With this setup, the Secrets from [step 2](#2-create-the-secrets) must exist bef
 
 ## Known limits
 
-| Limit | Effect | Workaround |
-|---|---|---|
+None at the moment.
 
 ## Troubleshooting
 
