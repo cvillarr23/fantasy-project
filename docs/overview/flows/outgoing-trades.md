@@ -95,7 +95,7 @@ The Trades page is still where you approve. The generic `POST /v1/runs/{id}/appr
 
 An offer staged before approval runs existed has no approval run. Approving it starts `trade-submit` directly, as before.
 
-The `trade-submit` run is a launcher job: worker image, `acts: true`, in the `espn-session` group so it never overlaps a scan or inbox run on the same ESPN session, `max_attempts: 1` and a 10-minute deadline. Its dedupe key `trade-submit@<offer_key>` means one run per offer however often it is approved. Dismissals, replacements and expiries are quiet. A `trade-submit` failure alerts like any other run.
+The `trade-submit` run is a launcher job: worker image, `acts: true`, in the `espn-session` group so it never overlaps a scan or inbox run on the same ESPN session, `max_attempts: 1` and a 10-minute deadline. Its dedupe key is `trade-submit@<approval id>` for an offer with an approval run, and `trade-submit@<offer_key>` for a legacy offer without one. Either way there is one run per approval or offer, however often it is approved. Dismissals, replacements and expiries are quiet. A `trade-submit` failure alerts like any other run.
 
 ## What is involved?
 
