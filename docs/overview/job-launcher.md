@@ -24,6 +24,7 @@ One launcher starts every job in the system: ingestion, solvers and the schedule
 | Chain | A named workflow of job steps with dependencies, such as `tuesday-weekly`. |
 | Fan-out | A run split into parallel child runs, one per value of a job param. |
 | Event | A fact, such as `rumor.signal_created`, that can start runs. |
+| Approval run | A run that waits for a person and launches nothing. Approving it can start another run. See [Approval runs](#approval-runs). |
 
 ## Components
 
@@ -73,12 +74,7 @@ The catalog lives in `fantasy-infra` as `base/launcher/catalog.yaml`. Core valid
 
 The generated [schedule inventory](/infra/schedules) lists every job, its schedule and its command.
 
-<details>
-<summary>What does the catalog reserve for later?</summary>
-
-`approval` parses but is rejected until implemented. The [ADR](/infra/adr/unified-job-launcher) lists them under v2.
-
-</details>
+Chain steps add one more field, `approval`. See [Approval runs](#approval-runs).
 
 ## Runs
 
@@ -90,6 +86,9 @@ stateDiagram-v2
     queued --> skipped: duplicate, overlap, paused, expired
     queued --> running: k8s Job started
     queued --> cancelled
+    [*] --> waiting: approval run opened
+    waiting --> success: approved
+    waiting --> skipped: dismissed, superseded, expired
     running --> success: exit 0
     running --> failure: exit non-zero, or start timeout
     running --> timeout: deadline, or orphaned
@@ -105,6 +104,8 @@ stateDiagram-v2
 | k8s Job | `<job>-<first 12 hex of run id>-a<attempt>`, trimmed to 63 characters | `lineup-optimizer-3f9a1c0b7d2e-a1` |
 | Chain step | The job name, scoped by `chain_root_id` | `tuesday-weekly` / `waiver-trigger` |
 
+`waiting` is only for [approval runs](#approval-runs). A waiting run is neither queued nor running, so it holds no pod slot, overlap slot or group slot.
+
 The pod's outermost `run_scope` adopts `RUN_ID`. Subprocesses and nested scopes become child rows, so one run can show its parts.
 
 ## Triggers
@@ -114,6 +115,7 @@ The pod's outermost `run_scope` adopts `RUN_ID`. Subprocesses and nested scopes 
 | `schedule` | A catalog cron slot | `job@slot` | Skipped, unless `catch_up` allows a late start |
 | `chain` | A chain step becoming ready | `job@chain_root` | Waits, up to the step's `latest` time plus 30 minutes |
 | `event` | A subscribed event | `job@key@debounce_window` | Skipped, or queued if the job sets `overlap: queue` |
+| `approval` | A run asking for approval, or a chain's `approval:` step | `approval@<run id>#<key>`, or `step@<chain root>` for a step | Nothing blocks it. It takes no slot. |
 | `manual`, `cli`, `mcp` | The Jobs page, `python -m src.cli jobs run`, or the `run_job` tool | A fresh UUID | A busy job refuses it at once under `overlap: forbid`. A full pod cap, or `overlap: queue`, makes it wait up to 30 minutes. |
 
 A repeated dedupe key creates no second run. This is why a launcher restart can't double-fire a slot.
@@ -142,8 +144,54 @@ flowchart LR
 | `on: finish` | The next step runs whatever the outcome. Steps that act on ESPN use it. |
 | `latest` | The step starts by this time even if its parent is still running. |
 | `max_duration` | Past it, the remaining steps are `skipped`. |
+| `approval` | The step waits for a person instead of running a job. See [Approval runs](#approval-runs). |
 
 The generated [chain diagrams](/infra/schedules) always match the catalog. Use them, not this page, for the current order.
+
+## Approval runs
+
+An approval run lets a person gate a run. It is a `run_log` row with executor `approval` and status `waiting`. It launches nothing, so it holds no pod, overlap or group slot, however long it waits. An approved one can start a run of its own, such as `trade-submit`.
+
+```mermaid
+stateDiagram-v2
+    [*] --> waiting: opened
+    waiting --> success: approved
+    waiting --> skipped: dismissed
+    waiting --> skipped: superseded
+    waiting --> skipped: past expires_at
+    success --> [*]: then run starts
+```
+
+| Outcome | Status, `end_reason` | What follows |
+|---|---|---|
+| Approved | `success`, `approved` | The launcher starts the approval's `then` run, if it has one. |
+| Dismissed | `skipped`, `dismissed` | Nothing. |
+| A newer approval replaces it | `skipped`, `superseded` | Nothing. |
+| Past `expires_at` | `skipped`, `expired` | Nothing. The scheduler's expiry sweep ends it. |
+
+The approver is recorded as `requested_by`. Approving and dismissing are ordinary writes, guarded like a manual run of an `acts: true` job.
+
+There are two ways to open one.
+
+| | A running process asks | A chain `approval:` step |
+|---|---|---|
+| How | `POST /v1/runs/{run_id}/approvals` with `key`, `title`, optional `then`, `link` and `expires_at` | `steps.<name>: {approval: {timeout, title}, after: [...]}` |
+| Who opens it | The process, while its run is `running`. A run that isn't running is refused. | The scheduler, once the step's `after` edges are met |
+| Dedupe key | `approval@<run id>#<key>` | `<step>@<chain root id>` |
+| Gates | `then: {job, params}`, validated against the catalog when the approval opens | Nothing. The step's own status is the gate. |
+| Expiry | `expires_at`, default 24 hours, at most 7 days | `timeout`, but never past the chain's `max_duration` |
+| Approved | Starts `then` as a manual run by the approver, parented to the approval | The step is `success`, so its `on: success` edges run |
+| Dismissed or expired | Nothing starts | The step is `skipped`, so its `on: success` edges skip |
+
+A process can open many approvals under different keys. The trade scan opens one per staged offer.
+
+The `then` run's dedupe key is `<job>@<approval id>`, so approving twice, or the scheduler retrying a start that failed after the approval committed, starts it once. The run carries no chain root, because the chain that asked may have ended long before.
+
+A chain step's decline is a person's decision, not a failure. A chain whose only unsuccessful steps were declined, or skipped because a step was declined, still ends `success`. An approval step can't share a name with a catalog job.
+
+`POST /v1/runs/{id}/approve` and `/dismiss` decide any approval run, except one whose `then` job a domain route owns. They refuse a `trade-submit` approval with `409`, because the Trades page's approve route also edits the message, recomputes the `offer_key` and writes the audit row in one transaction. See [Outgoing trades](./flows/outgoing-trades.md).
+
+The web UI shows a waiting run as **Waiting for you**. The run detail has an **Open** link to the approval's `link`, and a chain step shows as a waiting node in the graph. The Jobs page counts waiting approvals. A chain step's approval has **Approve** and **Dismiss** buttons. A trade approval links to the Trades page instead.
 
 ## Fan-out
 
@@ -213,6 +261,7 @@ Every stage has a hard limit, and every limit ends in a `run_log` status.
 | Lost track | Deadline plus 10 min, checked every minute | Watcher | `timeout`, reason `orphaned` |
 | Inline run | Same deadline. SIGTERM, then SIGKILL after 30 s. | Inline runner | `timeout` |
 | Whole chain | `max_duration` | Scheduler | Remaining steps `skipped` |
+| Waiting for approval | `expires_at`. A chain step's is capped by `max_duration`. | Scheduler | `skipped`, reason `expired` |
 | Finished k8s Job | 1 day | Kubernetes TTL | Removed |
 
 At most two pods run at once across all jobs, counting the KEDA browser worker's Jobs. Service jobs are outside this cap.
@@ -222,7 +271,7 @@ At most two pods run at once across all jobs, counting the KEDA browser worker's
 Grafana SQL alerts read `run_log` and route to ntfy. They fire on:
 
 - a launcher heartbeat older than 5 minutes;
-- a `failure`, `timeout` or `skipped` run on a job with `alert: warning` or `critical`. Skips from a pause, a chain step that never started, a chain timeout, a chain that already ended or a fan-out that already ended stay quiet. So does a fan-out parent's `fan_out_failed`, since the failed child alerts on its own row, and so do the `overlap` and `expired` skips of event runs on a job that also has a schedule or a chain step. A job that only has `on_event` still alerts on those, since nothing else would run it;
+- a `failure`, `timeout` or `skipped` run on a job with `alert: warning` or `critical`. Skips from a pause, an approval a person dismissed or a newer one replaced, an approval that expired unanswered, a chain step that never started, a chain timeout, a chain that already ended or a fan-out that already ended stay quiet. So does a fan-out parent's `fan_out_failed`, since the failed child alerts on its own row, and so do the `overlap` and `expired` skips of event runs on a job that also has a schedule or a chain step. A job that only has `on_event` still alerts on those, since nothing else would run it;
 - any message in `job_runs.dlq`;
 - a chain past its `max_duration`.
 
