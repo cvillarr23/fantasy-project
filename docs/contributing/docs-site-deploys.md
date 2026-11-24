@@ -119,7 +119,7 @@ gh workflow run docs-build.yml --repo cvillarr23/fantasy-project --ref main
 
 The build fails if any source checkout or the web UI component library build is missing. A local checkout without a sibling repo shows a placeholder for that section. Without `fantasy-web-ui/storybook-static`, `/ui/components/` shows a placeholder; run `npm run build-storybook` in the web-ui checkout to include it.
 
-To validate all four sections locally, clone or update the sibling repos and run:
+To validate all four sections locally, clone or update the sibling repos, put Helm 3 on your `PATH` (the environment reference renders fantasy-infra's chart with `helm template`), and run:
 
 ```bash
 FANTASY_DOCS_REQUIRED=true npm run build

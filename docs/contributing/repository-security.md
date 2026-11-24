@@ -20,7 +20,7 @@ Keep every self-hosted runner off a public repository, even when only trusted ev
 To bring self-hosted runners back, enforce the policy on the runner itself, where a fork can't change it. For example, a job-started hook in the runner pod can reject fork PRs and issue events.
 :::
 
-No job needs access to the cluster. The infra workflows use `kubectl` only to render kustomize overlays offline, and publication goes to GHCR and Cloudflare Pages.
+No job needs access to the cluster. The infra workflows use Helm only to render the chart offline (`helm template`), and publication goes to GHCR and Cloudflare Pages.
 
 ## Actions permissions
 

@@ -18,8 +18,14 @@ function checkouts(t, files) {
     fs.mkdirSync(path.dirname(path.join(root, file)), { recursive: true });
     fs.writeFileSync(path.join(root, file), text);
   }
+  if (Object.keys(files).some((file) => file.startsWith(`${CHART}/`))) {
+    fs.writeFileSync(path.join(root, CHART, 'Chart.yaml'), 'apiVersion: v2\nname: fantasy\nversion: 0.0.0\n');
+  }
   return root;
 }
+
+// A minimal stand-in for fantasy-infra's chart; checkouts() adds its Chart.yaml.
+const CHART = 'fantasy-infra/charts/fantasy';
 
 const entry = (name, repos, extra = {}) => ({ name, repos, secret: false, description: 'd', required: 'no', default: null, ...extra });
 
@@ -57,7 +63,7 @@ test('finds each way the services read a variable', async (t) => {
 test('reads what infra sets, including envFrom ConfigMaps and ExternalSecrets', async (t) => {
   const { scanInfra } = await load();
   const root = checkouts(t, {
-    'fantasy-infra/base/app.yaml': `
+    [`${CHART}/templates/app.yaml`]: `
 apiVersion: apps/v1
 kind: Deployment
 metadata: {name: app}
@@ -82,15 +88,20 @@ kind: ConfigMap
 metadata: {name: settings}
 data: {FROM_CONFIGMAP: "y"}
 `,
-    'fantasy-infra/overlays/production/externalsecrets.yaml': `
+    // Only the production values turn this on, so the scan has to render with them.
+    [`${CHART}/templates/externalsecrets.yaml`]: `
+{{- if .Values.externalSecrets }}
 apiVersion: external-secrets.io/v1
 kind: ExternalSecret
 metadata: {name: tokens}
 spec:
   target: {name: tokens}
   data:
-    - {secretKey: FROM_EXTERNAL_SECRET, remoteRef: {key: fantasy/x}}
+    - {secretKey: {{ .Values.secretKey }}, remoteRef: {key: fantasy/x}}
+{{- end }}
 `,
+    [`${CHART}/values.yaml`]: 'externalSecrets: false\n',
+    [`${CHART}/values-production.yaml`]: 'externalSecrets: true\nsecretKey: FROM_EXTERNAL_SECRET\n',
   });
   const infra = scanInfra(path.join(root, 'fantasy-infra'));
   assert.deepEqual(Object.keys(infra).sort(), ['FROM_CONFIGMAP', 'FROM_EXTERNAL_SECRET', 'FROM_SECRET', 'INIT_VALUE', 'PLAIN']);
@@ -128,7 +139,7 @@ test('pattern entries cover dynamic names and ignore entries must still exist', 
   const { scan, diff } = await load();
   const root = checkouts(t, {
     'fantasy-core-pipeline/src/a.py': 'os.getenv("INTERNAL_PID")',
-    'fantasy-infra/base/app.yaml': `
+    [`${CHART}/templates/app.yaml`]: `
 kind: Deployment
 metadata: {name: app}
 spec: {template: {spec: {containers: [{name: app, env: [{name: GROQ_API_KEY, valueFrom: {secretKeyRef: {name: g, key: k}}}]}]}}}
@@ -144,7 +155,7 @@ spec: {template: {spec: {containers: [{name: app, env: [{name: GROQ_API_KEY, val
 test('flags infra secrets marked as not secret and platform entries infra dropped', async (t) => {
   const { scan, diff } = await load();
   const root = checkouts(t, {
-    'fantasy-infra/base/app.yaml': `
+    [`${CHART}/templates/app.yaml`]: `
 kind: Deployment
 metadata: {name: app}
 spec: {template: {spec: {containers: [{name: app, env: [{name: TOKEN, valueFrom: {secretKeyRef: {name: t, key: k}}}]}]}}}

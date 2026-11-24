@@ -100,7 +100,7 @@ ESPN's rejection codes are decoded in [Error codes](/worker/espn/error-codes).
 | League and projection ingestion | `fantasy-core-pipeline`, `src/ingestion/` |
 | Read cache, dashboards | `fantasy-core-pipeline`, `src/services/` |
 | ESPN REST client, auth, bots | `fantasy-browser-worker`, `src/bots/` |
-| Credentials in the cluster | `fantasy-infra`, `overlays/production/` |
+| Credentials in the cluster | `fantasy-infra`, `charts/fantasy/values-production.yaml` (`secrets.externalSecrets`) |
 
 ## Related
 

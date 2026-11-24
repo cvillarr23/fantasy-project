@@ -1,9 +1,11 @@
 // Builds the environment variable reference on /installation/configuration and checks
 // it against the code. Descriptions, defaults and flags are hand-written in
 // docs/installation/env-vars.yaml; this script scans the four source checkouts for the
-// variables each one reads (and fantasy-infra for the ones production sets) and reports
+// variables each one reads (and fantasy-infra's rendered Helm chart for the ones production
+// sets) and reports
 // any disagreement. The site build runs it through the envReference plugin in
 // docusaurus.config.ts; `npm run check:env` runs the same check from the command line.
+import {spawnSync} from 'node:child_process';
 import {existsSync, readFileSync, readdirSync} from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath, pathToFileURL} from 'node:url';
@@ -60,7 +62,11 @@ export const sources = [
     ],
   },
 ];
-export const infraSource = {id: 'infra', repo: 'fantasy-infra', branch: 'main', dirs: ['base', 'overlays']};
+// Argo CD deploys production from this chart with these value files, in this order.
+export const infraSource = {
+  id: 'infra', repo: 'fantasy-infra', branch: 'main',
+  chart: 'charts/fantasy', valueFiles: ['values-production.yaml', 'values-images.yaml'],
+};
 export const repoIds = ['core', 'worker', 'ui'];
 
 const skippedDirs = new Set(['node_modules', '.git', 'tests', 'test', '__tests__', 'docs', 'dist', 'build', 'storybook-static', 'coverage']);
@@ -126,18 +132,23 @@ function containersIn(node, found = []) {
   return found;
 }
 
-// Returns {name: {secret, workloads}} for every variable a container in base/ or
-// overlays/ sets, including keys pulled in with envFrom from a ConfigMap or from a Secret
-// that an ExternalSecret in the repo creates.
+// The chart's templates aren't YAML until Helm renders them, so this renders the production
+// install the way Argo CD does. A checkout without the chart renders nothing.
+function renderInfra(checkout) {
+  const chart = path.join(checkout, infraSource.chart);
+  if (!existsSync(path.join(chart, 'Chart.yaml'))) return [];
+  const values = infraSource.valueFiles.map((name) => path.join(chart, name)).filter(existsSync).flatMap((file) => ['-f', file]);
+  const result = spawnSync('helm', ['template', 'fantasy-infra', chart, '--namespace', 'default', ...values], {encoding: 'utf8'});
+  if (result.error) throw new Error(`Rendering ${infraSource.repo}'s chart needs helm on PATH: ${result.error.message}`);
+  if (result.status !== 0) throw new Error(`helm template ${infraSource.chart} failed:\n${result.stderr}`);
+  return yaml.loadAll(result.stdout).filter((doc) => doc && typeof doc === 'object');
+}
+
+// Returns {name: {secret, workloads}} for every variable a container in the rendered
+// production chart sets, including keys pulled in with envFrom from a ConfigMap or from a
+// Secret that an ExternalSecret in the render creates.
 export function scanInfra(checkout) {
-  const docs = infraSource.dirs.flatMap((dir) => walk(path.join(checkout, dir), ['.yaml', '.yml']))
-    .flatMap((file) => {
-      try {
-        return yaml.loadAll(readFileSync(file, 'utf8')).filter((doc) => doc && typeof doc === 'object');
-      } catch {
-        return [];
-      }
-    });
+  const docs = renderInfra(checkout);
   const configMaps = new Map();
   const secrets = new Map();
   for (const doc of docs) {
