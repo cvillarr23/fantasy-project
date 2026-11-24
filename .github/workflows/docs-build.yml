@@ -74,6 +74,10 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: npm
+      # The environment reference renders fantasy-infra's Helm chart to see what production sets.
+      - uses: azure/setup-helm@2f5e7bc67f1f9972ab16657bb795f36d8f04de0e # v5.1.0
+        with:
+          version: 'v3.19.0'
       - run: npm ci
       - run: npm run test:actions
       - run: npm run build
