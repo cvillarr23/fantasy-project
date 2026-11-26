@@ -36,7 +36,7 @@ flowchart LR
 
 | Component | Repo | Role |
 |---|---|---|
-| Web UI | `fantasy-web-ui` | React console for lineups, waivers, trades, the inbox, activity and draft day. nginx serves it and proxies `/v1/*` to core. |
+| Web UI | `fantasy-web-ui` | React console for lineups, the live matchup, waivers, trades, the inbox, activity and draft day. nginx serves it and proxies `/v1/*` to core. |
 | oauth2-proxy | `fantasy-infra` | Signs you in before any UI page or API call. The API itself doesn't check user identity. See [Authentication](/ui/auth). |
 | Core API | `fantasy-core-pipeline` | FastAPI control plane. It reads data for the UI, scores trades, records actions and publishes them to RabbitMQ. See the [API reference](/core/api-reference). |
 | Ingestion and solvers | `fantasy-core-pipeline` | Python modules the job launcher runs as Kubernetes Jobs. They sync players, projections and scores, compute VORP, and pick lineups and waiver claims. See [Decision pipelines](/core/decision-pipelines). |
@@ -53,7 +53,7 @@ flowchart LR
 | Postgres: activity tables | `activity_actions`, `activity_outbox`, `activity_events`: each queued action, its pending message and its timeline | Core API, worker |
 | Postgres: run tables | `run_log` (one row per job run), `job_overrides` (pauses), `launcher_heartbeat` | Launcher, jobs |
 | Postgres: audit tables | `bot_decisions` (why core published) and `execution_log` (what the worker did, trade inbox rows, trade claims) | Core API, worker |
-| Redis | Draft-day pick stream, draft board, per-pick pause flags, draft-sync health | Draft sync, draft listener, core API |
+| Redis | Draft-day pick stream, draft board, per-pick pause flags, draft-sync health; the `live:*` snapshot of this week's games | Draft sync, draft listener, live poller, core API |
 | RabbitMQ | Durable work queues, one per action type, plus `job_runs` (run commands) and the `job_events` topic | Core publishes, worker consumes. The launcher consumes `job_runs` and `job_events`. |
 
 Grafana reads Postgres through a read-only `grafana_reader` role, never the read-write `bot_admin` role. Table definitions are in the [Data model](/core/data-model).
@@ -94,9 +94,40 @@ The launcher starts every job. The Tuesday jobs form the `tuesday-weekly` chain:
 | Schedule | `rumor-syncer` every 30 minutes |
 | Chain step | `lineup-optimizer` after `projections-refresh` |
 | Event | `rumor.signal_created` starts `rumor-action-trigger` |
+| Kickoff | `live-games` starts 20 minutes before each NFL kickoff |
 | You | The Jobs page, `python -m src.cli jobs run`, or an MCP tool |
 
 The generated [schedule inventory](/infra/schedules) lists every job, schedule and chain. [Job launcher](./job-launcher.md) defines the terms.
+
+## How does live game data reach the UI?
+
+`live-games` is a service job in the catalog. Its `kickoffs` block makes the launcher start it a set lead time before each regular-season kickoff, read from the nflverse schedule. If the schedule is unreadable, or a game has no time yet, it starts every 30 minutes instead. The poller, `src/ingestion/live_games.py`, exits when no game is under way or about to start.
+
+```mermaid
+flowchart LR
+    espn(["ESPN<br/>scoreboard, plays, league"]) --> poller["live-games<br/>service job"]
+    poller -->|"live:* keys"| redis[("Redis")]
+    redis --> api["core-pipeline<br/>live API"]
+    api -->|"/v1/matchup/*, /v1/live/players"| ui["web-ui"]
+    api -.->|"live:last_viewed"| redis
+```
+
+- **The poller writes Redis, never Postgres.** Each tick it stores per-game, per-player and play-by-play keys with a 6 hour TTL. Fantasy points come from ESPN's own league payload and are never recomputed.
+- **The API only reads Redis.** `GET /v1/matchup/feed` returns plays and news for both sides' players. `GET /v1/matchup/games/{event_id}` returns one game's header, each side's points and its plays. `GET /v1/live/players` and the matchup and player summaries carry a `live` block. With no poller running, readers show no live data rather than an error.
+- **Viewers speed the poller up.** Serving live data sets `live:last_viewed`. While it is under 5 minutes old the poller ticks every 30 seconds, otherwise every 180.
+- **Scoring explains the points.** `GET /v1/scoring/rules` turns the league's `scoring_settings` into plain-English rules. A breakdown on the live pages itemizes ESPN's own applied points per stat (`src/espn_scoring.py`).
+- **News is display-only.** `sync_rumors` stores ESPN and Bluesky items in `raw_signals`. `GET /v1/news` merges and de-duplicates them with the other sources. These two sources never feed the worker's rumor digest or any roster move.
+
+The web UI shows this data in four places:
+
+| Where | What it shows |
+|---|---|
+| Lineup and Matchup player cards | A live line under the player: clock, score and field position during a game, or kickoff time before it |
+| Matchup | A live feed of plays and news beside a games panel of per-game tiles |
+| Game details (`/matchup/game/:eventId`) | One game's score, each side's starters' points and its plays |
+| Scoring guide (`/scoring`) | The league's rules and a worked example from this week's matchup |
+
+Clicking a player on Lineup or Matchup opens a popover with Summary, News and Stats tabs. It links to Game details and the Scoring guide.
 
 ## How does code reach the cluster?
 
